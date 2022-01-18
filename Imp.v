@@ -1582,7 +1582,7 @@ Proof.
     In fact, this cannot happen: [ceval] _is_ a partial function: *)
 
 Theorem ceval_deterministic: forall c st st1 st2,
-     st =[ c ]=> st1  ->
+     st =[ c ]=> st1 ->
      st =[ c ]=> st2 ->
      st1 = st2.
 Proof.
@@ -1706,48 +1706,60 @@ Inductive no_whilesR: com -> Prop :=
       no_whilesR <{ if b then ct else cf end }>
 .
 
+Ltac bool_andb_hyp_left :=
+  match goal with
+    H: ?B && _ = true
+    |- ?B = true => destruct B; [ reflexivity | discriminate ]
+  end
+.
+
+Ltac bool_andb_hyp_right :=
+  match goal with
+    H: _ && ?B = true
+    |- ?B = true => destruct B; [
+      reflexivity
+      | rewrite -> andb_false_r in H; discriminate H
+    ]
+  end
+.
+
+Ltac apply_hyp_bool_andb :=
+  match goal with
+    | H: ?B && _ = true, 
+      H1: ?B = true -> ?P
+    |- ?P => apply H1; bool_andb_hyp_left
+
+    | H: _ && ?B = true,
+      H1: ?B = true -> ?P
+    |- ?P => apply H1; bool_andb_hyp_right
+  end
+.
+
 Theorem n_while_eqv_fixpoint_to_R:
   forall c, no_whiles c = true -> no_whilesR c.
 Proof.
-  intros c H_no_whiles. induction c.
-  - constructor.
-  - constructor.
-  - simpl in H_no_whiles. constructor.
-    + apply IHc1. destruct (no_whiles c1) eqn:H_no_whiles_c1.
-      * reflexivity.
-      * discriminate.
-    + apply IHc2. destruct (no_whiles c2) eqn:H_no_whiles_c2.
-      * reflexivity.
-      * rewrite andb_false_r in H_no_whiles. discriminate.
-  - simpl in H_no_whiles. constructor.
-    + apply IHc1. destruct (no_whiles c1) eqn:H_no_whiles_c1.
-      * reflexivity.
-      * discriminate.
-    + apply IHc2. destruct (no_whiles c2) eqn:H_no_whiles_c2.
-      * reflexivity.
-      * rewrite andb_false_r in H_no_whiles. discriminate.
-  - simpl in H_no_whiles. discriminate.
+  intros c H_no_whiles. 
+  induction c; simpl in H_no_whiles;
+  try constructor; try apply_hyp_bool_andb.
+  (* while *)
+  - discriminate.
 Qed.
+
+Ltac bool_andb_goal :=
+  match goal with
+  | H_left: ?B_right = true,
+    H_right: ?B_left = true
+  |- ?B_right && ?B_left = true =>
+    rewrite -> H_left; rewrite -> H_right; reflexivity
+  end
+.
 
 Theorem n_while_eqv_R_to_fixpoint:
   forall c, no_whilesR c -> no_whiles c = true.
 Proof.
   intros c H_no_whilesR.
-  induction H_no_whilesR as [
-    (* skip *)
-    (* assignment *)
-    | x a
-    (* seq *)
-    | c1 c2 Hc1 IHc1 Hc2 IHc2 
-    (* if *)
-    | b ct cf Hct IHct Hcf IHcf
-  ].
-  - reflexivity.
-  - reflexivity.
-  - simpl. rewrite -> IHc1. rewrite -> IHc2.
-    reflexivity.
-  - simpl. rewrite -> IHct. rewrite -> IHcf.
-    reflexivity.
+  induction H_no_whilesR; simpl;
+  try bool_andb_goal; reflexivity.
 Qed.
 
 Theorem no_whiles_eqv:
