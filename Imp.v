@@ -1778,7 +1778,31 @@ Qed.
 
     Use either [no_whiles] or [no_whilesR], as you prefer. *)
 
-(* FILL IN HERE *)
+Theorem no_whiles_terminating: forall (c : com) (st : state),
+  no_whilesR c -> st =[ c ]=> (ceval_fun_no_while st c).
+Proof.
+  intros c st H_c; generalize dependent st.
+  induction H_c; simpl; intros.
+  (*
+    Cannot trivially chain the 'constructor' tactic.
+    See the 'if' case for more details.
+  *)
+  - constructor.
+  - constructor. reflexivity.
+  - (* seq *)
+    apply E_Seq with (st' := (ceval_fun_no_while st c1));
+    auto.
+  - (* if *)
+    (*
+      Chaining the 'constructor' tactic after the induction discards the
+      important hypothesis regarding the value of (beval st b).
+      It also choses E_IfTrue regardless of the case.
+      So this one has to be handled manually.
+    *)
+    destruct (beval st b) as [|] eqn:E_beval_b.
+    + apply E_IfTrue; auto.
+    + apply E_IfFalse; auto.
+Qed.
 
 (* Do not modify the following line: *)
 Definition manual_grade_for_no_whiles_terminating : option (nat*string) := None.
