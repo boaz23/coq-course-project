@@ -1660,15 +1660,17 @@ Theorem loop_never_stops : forall st st',
   ~(st =[ loop ]=> st').
 Proof.
   intros st st' contra. unfold loop in contra.
-  remember <{ while true do skip end }> as loopdef
-           eqn:Heqloopdef.
+  remember <{ while true do skip end }> as loopdef eqn:Heqloopdef.
+  induction contra;(try discriminate);auto.
+  - inversion Heqloopdef. subst. clear Heqloopdef.
+    unfold beval in H. discriminate.
 
   (** Proceed by induction on the assumed derivation showing that
       [loopdef] terminates.  Most of the cases are immediately
       contradictory and so can be solved in one step with
       [discriminate]. *)
 
-  (* FILL IN HERE *) Admitted.
+Qed.
 (** [] *)
 
 (** **** Exercise: 3 stars, standard (no_whiles_eqv)
