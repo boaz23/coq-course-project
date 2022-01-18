@@ -1640,7 +1640,16 @@ Proof.
 
     State and prove a specification of [XtimesYinZ]. *)
 
-(* FILL IN HERE *)
+Theorem XtimesYinZ_spec : forall (st st' : state) (nx ny : nat),
+  st X = nx ->
+  st Y = ny ->
+  st =[ Z := X * Y ]=> st' ->
+  st' Z = (st X) * (st Y).
+Proof.
+  intros st st' nx ny. intros HX HY Heval.
+  inversion Heval. subst. clear Heval.
+  simpl. apply t_update_eq.
+Qed.
 
 (* Do not modify the following line: *)
 Definition manual_grade_for_XtimesYinZ_spec : option (nat*string) := None.
