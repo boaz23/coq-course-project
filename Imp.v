@@ -1950,10 +1950,27 @@ Proof. reflexivity. Qed.
     the resulting stack, and executing [p2] from that stack. Prove
     that fact. *)
 
+Tactic Notation "ltac_list_auto_upto2_elems" constr(l) :=
+  simpl;
+  destruct l as [| x1 l']; [
+    auto
+    | destruct l' as [| x2 l'']; auto
+  ]
+.
+
+Tactic Notation "sinstr_2opnds_auto_l" constr(s) constr(l) constr(H) :=
+  destruct s; (try apply H);
+  ltac_list_auto_upto2_elems l
+.
+
 Theorem execute_app : forall st p1 p2 stack,
   s_execute st stack (p1 ++ p2) = s_execute st (s_execute st stack p1) p2.
 Proof.
-  (* FILL IN HERE *) Admitted.
+  intros st p1; generalize dependent st.
+  induction p1 as [| s1 p1' IHp1']; intros;
+  try sinstr_2opnds_auto_l s1 stack IHp1'.
+  - reflexivity.
+Qed.
 
 (** [] *)
 
