@@ -1643,7 +1643,7 @@ Proof.
 Theorem XtimesYinZ_spec : forall (st st' : state) (nx ny : nat),
   st X = nx ->
   st Y = ny ->
-  st =[ Z := X * Y ]=> st' ->
+  st =[ XtimesYinZ ]=> st' ->
   st' Z = (st X) * (st Y).
 Proof.
   intros st st' nx ny. intros HX HY Heval.
