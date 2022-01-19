@@ -2221,12 +2221,34 @@ Qed.
 (** [] *)
 
 (** **** Exercise: 3 stars, advanced (while_break_true) *)
+(* Copied from Auto chapter in the book (LF) *)
+Ltac rwd H1 H2 := rewrite H1 in H2; discriminate.
+
+Ltac find_rwd :=
+  match goal with
+    H1: ?E = true,
+    H2: ?E = false
+    |- _ => rwd H1 H2
+  end
+.
+
 Theorem while_break_true : forall b c st st',
   st =[ while b do c end ]=> st' / SContinue ->
   beval st' b = true ->
   exists st'', st'' =[ c ]=> st' / SBreak.
 Proof.
-(* FILL IN HERE *) Admitted.
+  intros b c st st'. intros H_while_eval H_b_eval_after.
+  remember <{ while b do c end }> as c_while.
+  induction H_while_eval; try discriminate;
+  try (
+    inversion Heqc_while; subst; rename H into H_b_eval_before;
+    clear Heqc_while
+  );
+  try find_rwd; try auto.
+  - (* E_WhileTrue_Break *)
+    exists st. exact H_while_eval.
+Qed.
+
 (** [] *)
 
 (** **** Exercise: 4 stars, advanced (ceval_deterministic) *)
