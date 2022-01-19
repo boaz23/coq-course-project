@@ -63,3 +63,37 @@ Proof.
     rewrite -> list_map_app_split. simpl.
     reflexivity.
 Qed.
+
+Definition injective {A B} (f : A -> B) :=
+  forall x y : A, f x = f y -> x = y.
+
+Theorem tree_map_injective : forall{X Y : Type} (f : X -> Y) (t1 t2 : tree X),
+  injective f -> tree_map f t1 = tree_map f t2 -> t1 = t2.
+Proof.
+  intros X Y f t1 t2 f_injective; generalize dependent t2.
+  induction t1 as [| l1 IHl1 x1 r1 IHr1].
+  - intros. destruct t2 as [| l2 x2 r2].
+    + reflexivity.
+    + discriminate.
+  - intros t2. destruct t2 as [| l2 x2 r2].
+    + intros H. discriminate H.
+    + simpl. intros H. injection H.
+      intros H_eq_map_r H_eq_x H_eq_map_l.
+      rewrite <- (IHl1 l2 H_eq_map_l). rewrite <- (f_injective x1 x2 H_eq_x).
+      rewrite <- (IHr1 r2 H_eq_map_r). reflexivity.
+Qed.
+
+(*
+(*
+A less exciting theorem:
+*)
+Theorem tree_map_composition : forall
+  {X1 X2 X3 : Type} (f1_2 : X1 -> X2) (f2_3 : X2 -> X3) (t : tree X1),
+  tree_map f2_3 (tree_map f1_2 t) = tree_map (fun x => f2_3(f1_2 x)) t.
+Proof.
+  intros. induction t as [| l IHl x r IHr].
+  - reflexivity.
+  - simpl. rewrite -> IHl. rewrite -> IHr.
+    reflexivity.
+Qed.
+*)
