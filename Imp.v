@@ -1414,6 +1414,8 @@ Fixpoint ceval_fun_no_while (st : state) (c : com) : state :=
           else ceval_fun_no_while st c2
     | <{ while b do c end }> =>
         st  (* bogus *)
+    | <{ for (init;; b;; update) do iter end }> =>
+        st  (* bogus *)
   end.
 
 (** In a more conventional functional programming language like OCaml or
@@ -1543,6 +1545,10 @@ Inductive ceval : com -> state -> state -> Prop :=
       st  =[ c ]=> st' ->
       st' =[ while b do c end ]=> st'' ->
       st  =[ while b do c end ]=> st''
+  | E_For : forall st st' init st_init b upd iter,
+      st =[ init ]=> st_init ->
+      st_init =[ while b do iter; upd end ]=> st' ->
+      st =[ for (init;; b;; upd) do iter end ]=> st'
 
   where "st =[ c ]=> st'" := (ceval c st st').
 
@@ -1568,6 +1574,38 @@ Proof.
     apply E_IfFalse.
     reflexivity.
     apply E_Asgn. reflexivity.
+Qed.
+
+Example ceval_for_loop_example_1:
+  empty_st =[
+    for (Z:= 1; X := 0;; X <= 1;; X := X + 1) do
+      Z := Z + 3
+    end
+  ]=> (
+    X !-> 2; Z !-> 7;
+    X !-> 1; Z !-> 4;
+    X !-> 0; Z !-> 1
+  ).
+Proof.
+  apply E_For with (st_init :=  X !-> 0; Z !-> 1).
+  - apply E_Seq with (st' := Z !-> 1).
+    + apply E_Asgn. reflexivity.
+    + apply E_Asgn. reflexivity.
+  - apply E_WhileTrue with (st' := X !-> 1; Z !-> 4; X !-> 0; Z !-> 1).
+    + (* beval st b = true *)
+      reflexivity.
+    + apply E_Seq with (st' := Z !-> 4; X !-> 0; Z !-> 1).
+      * apply E_Asgn. reflexivity.
+      * apply E_Asgn. reflexivity.
+    + apply E_WhileTrue with
+        (st' := X !-> 2; Z !-> 7; X !-> 1; Z !-> 4; X !-> 0; Z !-> 1).
+      * (* beval st b = true *)
+        reflexivity.
+      * apply E_Seq
+          with (st' := Z !-> 7; X !-> 1; Z !-> 4; X !-> 0; Z !-> 1).
+        -- apply E_Asgn. reflexivity.
+        -- apply E_Asgn. reflexivity.
+      * apply E_WhileFalse. reflexivity.
 Qed.
 
 (** **** Exercise: 2 stars, standard, optional (ceval_example2) *)
