@@ -1767,6 +1767,8 @@ Fixpoint no_whiles (c : com) : bool :=
       andb (no_whiles ct) (no_whiles cf)
   | <{ while _ do _ end }>  =>
       false
+  | <{ for (_;; _;; _) do _ end }> =>
+      false
   end.
 
 (** This predicate yields [true] just on programs that have no while
@@ -1818,9 +1820,7 @@ Theorem n_while_eqv_fixpoint_to_R:
 Proof.
   intros c H_no_whiles. 
   induction c; simpl in H_no_whiles;
-  try constructor; try apply_hyp_bool_andb.
-  (* while *)
-  - discriminate.
+  try constructor; try apply_hyp_bool_andb; try discriminate.
 Qed.
 
 Ltac bool_andb_goal :=
