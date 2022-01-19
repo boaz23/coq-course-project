@@ -29,3 +29,19 @@ Definition example_tree : tree nat := (
 Example in_order_example_1 :
   in_order example_tree = [1; 3; 2; 0; 4; 1; 5].
 Proof. reflexivity. Qed.
+
+Fixpoint tree_map {X Y} (f : X -> Y) (t : tree X) : tree Y :=
+  match t with
+  | empty => empty
+  | node l x r => node (tree_map f l) (f x) (tree_map f r)
+  end
+.
+
+Example tree_map_example_1 :
+  tree_map (fun x => [x; 2 * x]) example_tree = (
+    node
+      (node (node empty [1; 2] empty) [3; 6] (node empty [2; 4] empty))
+      [0; 0]
+      (node (node empty [4; 8] empty) [1; 2] (node empty [5; 10] empty))
+  ).
+Proof. reflexivity. Qed.
