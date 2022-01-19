@@ -1970,17 +1970,26 @@ Qed.
     becomes difficult, consider whether your implementation of
     [s_execute] or [s_compile] could be simplified. *)
 
+Tactic Notation "s_compile_correct_aux_rewrite" constr(IHe1) constr(IHe2) :=
+  rewrite -> ! execute_app; rewrite -> IHe1; rewrite -> IHe2
+.
+
 Lemma s_compile_correct_aux : forall st e stack,
   s_execute st stack (s_compile e) = aeval st e :: stack.
 Proof.
-  (* FILL IN HERE *) Admitted.
+  intros st e; generalize dependent st.
+  induction e; intros; simpl;
+  try s_compile_correct_aux_rewrite IHe1 IHe2;
+  reflexivity.
+Qed.
 
 (** The main theorem should be a very easy corollary of that lemma. *)
 
 Theorem s_compile_correct : forall (st : state) (e : aexp),
   s_execute st [] (s_compile e) = [ aeval st e ].
 Proof.
-  (* FILL IN HERE *) Admitted.
+  intros. exact (s_compile_correct_aux st e []).
+Qed.
 
 (** [] *)
 
