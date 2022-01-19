@@ -2221,7 +2221,7 @@ Qed.
 (** [] *)
 
 (** **** Exercise: 3 stars, advanced (while_break_true) *)
-(* Copied from Auto chapter in the book (LF) *)
+
 Ltac rwd H1 H2 := rewrite H1 in H2; discriminate.
 
 Ltac find_rwd :=
@@ -2244,7 +2244,7 @@ Proof.
     inversion Heqc_while; subst; rename H into H_b_eval_before;
     clear Heqc_while
   );
-  try find_rwd; try auto.
+  try find_rwd; auto.
   - (* E_WhileTrue_Break *)
     exists st. exact H_while_eval.
 Qed.
@@ -2252,12 +2252,54 @@ Qed.
 (** [] *)
 
 (** **** Exercise: 4 stars, advanced (ceval_deterministic) *)
+
+Ltac rwd' H1 H2 := rewrite H1 in H2; discriminate.
+
+Ltac find_rwd' :=
+  match goal with
+    | H1: ?E = true,
+      H2: ?E = false
+      |- _ => rwd' H1 H2
+
+    | H1: ?E = SContinue,
+      H2: ?E = SBreak
+    |- _ => rwd' H1 H2
+  end
+.
+
+Ltac find_eqn_2params_and_eq :=
+  match goal with
+    H1: forall x1 x2, ?P x2 x1 -> ?L1 = ?R1 /\ ?L2 = ?R2,
+    H2: ?P ?X1 ?X2
+    |- _ =>
+      pose (H_and_eq := (H1 X2 X1 H2));
+      destruct H_and_eq as [H_eq1 H_eq2]
+      (*
+        For some reason subst works better.
+        Using this, some subgoals are left,
+        while using subst, every subgoal is solved.
+        I did not dig into that reason.
+      *)
+      (*;
+      rewrite -> ! H_eq1 in *; rewrite -> ! H_eq2 in *;
+      clear H_eq1 H_eq2
+      *)
+  end
+.
+
+
 Theorem ceval_deterministic: forall (c:com) st st1 st2 s1 s2,
      st =[ c ]=> st1 / s1 ->
      st =[ c ]=> st2 / s2 ->
      st1 = st2 /\ s1 = s2.
 Proof.
-  (* FILL IN HERE *) Admitted.
+  intros c st st1 st2 s1 s2 E1 E2; generalize dependent s2;
+  generalize dependent st2.
+  induction E1; intros st2 s2 E2; inversion E2; subst;
+  (* See explaination above for why using subst *)
+  repeat (find_eqn_2params_and_eq; subst);
+  try discriminate; try find_rwd'; auto.
+Qed.
 
 (** [] *)
 End BreakImp.
