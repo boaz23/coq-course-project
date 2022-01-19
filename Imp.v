@@ -1684,7 +1684,11 @@ Proof.
     rewrite H in H4. discriminate.
   - (* E_WhileTrue, b evaluates to true *)
     rewrite (IHE1_1 st'0 H3) in *.
-    apply IHE1_2. assumption.  Qed.
+    apply IHE1_2. assumption.
+  - (* E_For *)
+    rewrite <- (IHE1_1 st_init0 H5) in *.
+    apply IHE1_2. assumption.
+Qed.
 
 (* ################################################################# *)
 (** * Reasoning About Imp Programs *)
