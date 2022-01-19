@@ -1778,7 +1778,7 @@ Qed.
 
     Use either [no_whiles] or [no_whilesR], as you prefer. *)
 
-Theorem no_whiles_terminating: forall (c : com) (st : state),
+Theorem no_whiles_terminating_noWhileR_implies_cevalR: forall (c : com) (st : state),
   no_whilesR c -> st =[ c ]=> (ceval_fun_no_while st c).
 Proof.
   intros c st H_c; generalize dependent st.
@@ -1803,6 +1803,74 @@ Proof.
     + apply E_IfTrue; auto.
     + apply E_IfFalse; auto.
 Qed.
+
+(*
+Theorem ceval_fun_no_while_seq_middle_state:
+  forall (c1 c2 : com) (st st' : state),
+  st =[ c1; c2 ]=> ceval_fun_no_while (ceval_fun_no_while st c1) c2 ->
+  st' =[ c2 ]=> ceval_fun_no_while (ceval_fun_no_while st c1) c2 ->
+  st =[ c1 ]=> st' ->
+  st' = ceval_fun_no_while st c1.
+Proof.
+  intros c1. induction c1; simpl; intros.
+  - inversion H1; subst. reflexivity.
+  - inversion H1; subst. reflexivity.
+  - give_up.
+  - give_up.
+  - give_up.
+Admitted.
+*)
+(*
+Theorem ceval_fun_no_while_seq_middle_state:
+  forall (c1 c2 : com) (st st' : state),
+  st' = ceval_fun_no_while st c1 ->
+  st =[ c1; c2 ]=> ceval_fun_no_while st' c2 ->
+  st =[ c1 ]=> st'.
+Proof.
+  intros c1. induction c1; simpl; intros.
+  - give_up.
+  - give_up.
+  - give_up.
+  - give_up.
+  - give_up.
+Admitted.
+
+Theorem no_whiles_terminating_cevalR_implies_noWhileR: forall (c : com) (st : state),
+   st =[ c ]=> (ceval_fun_no_while st c) -> no_whilesR c.
+Proof.
+  intros c.
+  induction c; simpl; intros.
+  - constructor.
+  - constructor.
+  - apply no_whilesR_seq.
+    + apply (IHc1 st). inversion H; subst.
+      apply ceval_fun_no_while_seq_middle_state with (c2 := c2).
+      reflexivity. exact H.
+    + apply (IHc2 st). inversion H; subst.
+Qed.
+*)
+
+Theorem no_whiles_terminating_cevalR_implies_noWhileR: forall (c : com) (st : state),
+   st =[ c ]=> (ceval_fun_no_while st c) -> no_whilesR c.
+Proof.
+  intros c st H_c.
+  induction H_c; simpl; intros.
+  - constructor.
+  - constructor.
+  - constructor.
+    + apply IHH_c1.
+    + apply IHH_c2.
+  - apply no_whilesR_if.
+    + apply IHH_c.
+Admitted.
+
+Theorem no_whiles_terminating: forall (c : com) (st : state),
+  no_whilesR c <-> st =[ c ]=> (ceval_fun_no_while st c).
+Proof.
+  intros. split.
+  - apply no_whiles_terminating_noWhileR_implies_cevalR.
+  - apply no_whiles_terminating_cevalR_implies_noWhileR.
+Admitted.
 
 (* Do not modify the following line: *)
 Definition manual_grade_for_no_whiles_terminating : option (nat*string) := None.
