@@ -1180,7 +1180,9 @@ Inductive com : Type :=
   | CAsgn (x : string) (a : aexp)
   | CSeq (c1 c2 : com)
   | CIf (b : bexp) (c1 c2 : com)
-  | CWhile (b : bexp) (c : com).
+  | CWhile (b : bexp) (c : com)
+  | CFor (c_init : com) (b : bexp) (c_update : com) (c_iter : com)
+.
 
 (** As we did for expressions, we can use a few [Notation]
     declarations to make reading and writing Imp programs more
@@ -1202,6 +1204,13 @@ Notation "'if' x 'then' y 'else' z 'end'" :=
 Notation "'while' x 'do' y 'end'" :=
          (CWhile x y)
             (in custom com at level 89, x at level 99, y at level 99) : com_scope.
+Notation "'for' '(' init ';;' b ';;' update ')' 'do' iter 'end'" :=
+         (CFor init b update iter)
+            (in custom com at level 89,
+              init at level 99,
+              b at level 99,
+              update at level 99,
+              iter at level 99) : com_scope.
 
 (** For example, here is the factorial function again, written as a
     formal Coq definition.  When this command terminates, the variable
@@ -1216,6 +1225,33 @@ Definition fact_in_coq : com :=
      end }>.
 
 Print fact_in_coq.
+
+Definition imp_for_loop_notation_test : com :=
+  <{
+    X := 1;
+    while true do skip end;
+    for (W := 0;; W <= 9;; W := W + 1) do
+      X := 2 * X
+    end
+  }>
+.
+
+Definition imp_for_loop_notation_test_2 : com :=
+  <{
+    X := 1;
+    while true do skip end;
+    for (
+      for (W := 1;; true;; Z := Z + 1) do skip end;;
+      W <= 9;;
+      W := W + 1
+    ) do
+      X := 2 * X
+    end
+  }>
+.
+
+Check imp_for_loop_notation_test : com.
+Print imp_for_loop_notation_test.
 
 (* ================================================================= *)
 (** ** Desugaring Notations *)
