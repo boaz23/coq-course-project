@@ -1871,38 +1871,31 @@ Inductive sinstr : Type :=
     But for sake of later exercises, it would be best to skip the
     offending instruction and continue with the next one.  *)
 
+Definition s_stack_2opnds
+  (f: nat -> nat -> nat) (stack: list nat) : list nat :=
+  match stack with
+  | n1 :: n2 :: stack' => (f n2 n1) :: stack'
+  | _ :: _ => stack
+  | [] => stack
+  end
+.
+
 Fixpoint s_execute (st : state) (stack : list nat)
                    (prog : list sinstr)
                  : list nat :=
   match prog with
   | [] => stack
-  | s :: prog' => (
-    match s with
-    | SPush n => s_execute st (n :: stack) prog'
-    | SLoad x => s_execute st ((st x) :: stack) prog'
-    | SPlus => (
-      match stack with
-      | n1 :: n2 :: stack' => s_execute st ((n1 + n2) :: stack') prog'
-      | _ :: _ => s_execute st stack prog'
-      | [] => s_execute st stack prog'
+  | s :: prog' =>
+    let stack' := (
+      match s with
+      | SPush n => n :: stack
+      | SLoad x => (st x) :: stack
+      | SPlus => s_stack_2opnds plus stack
+      | SMinus => s_stack_2opnds minus stack
+      | SMult => s_stack_2opnds mult stack
       end
-    )
-    | SMinus => (
-      match stack with
-      | n1 :: n2 :: stack' => s_execute st ((n2 - n1) :: stack') prog'
-      | _ :: _ => s_execute st stack prog'
-      | [] => s_execute st stack prog'
-      end
-    )
-    | SMult => (
-      match stack with
-      | n1 :: n2 :: stack' => s_execute st ((n1 * n2) :: stack') prog'
-      | _ :: _ => s_execute st stack prog'
-      | [] => s_execute st stack prog'
-      end
-    )
-    end
-  )
+    ) in
+    s_execute st stack' prog'
   end
 .
 
@@ -1950,17 +1943,13 @@ Proof. reflexivity. Qed.
     the resulting stack, and executing [p2] from that stack. Prove
     that fact. *)
 
-Tactic Notation "ltac_list_auto_upto2_elems" constr(l) :=
-  simpl;
-  destruct l as [| x1 l']; [
-    auto
-    | destruct l' as [| x2 l'']; auto
-  ]
+Tactic Notation "ltac_list_auto_dest_repeat" constr(l) :=
+  simpl; repeat (destruct l as [| x1 l]; auto)
 .
 
-Tactic Notation "sinstr_2opnds_auto_l" constr(s) constr(l) constr(H) :=
-  destruct s; (try apply H);
-  ltac_list_auto_upto2_elems l
+Tactic Notation "sinstr_multi_opnds_auto_l" constr(s) constr(l) tactic(c) :=
+  destruct s; (try c);
+  ltac_list_auto_dest_repeat l
 .
 
 Theorem execute_app : forall st p1 p2 stack,
@@ -1968,7 +1957,7 @@ Theorem execute_app : forall st p1 p2 stack,
 Proof.
   intros st p1; generalize dependent st.
   induction p1 as [| s1 p1' IHp1']; intros;
-  try sinstr_2opnds_auto_l s1 stack IHp1'.
+  try sinstr_multi_opnds_auto_l s1 stack (apply IHp1').
   - reflexivity.
 Qed.
 
