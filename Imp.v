@@ -1661,9 +1661,9 @@ Theorem loop_never_stops : forall st st',
 Proof.
   intros st st' contra. unfold loop in contra.
   remember <{ while true do skip end }> as loopdef eqn:Heqloopdef.
-  induction contra;(try discriminate);auto.
-  - inversion Heqloopdef. subst. clear Heqloopdef.
-    unfold beval in H. discriminate.
+  induction contra; try discriminate; auto.
+  - inversion Heqloopdef; subst; clear Heqloopdef.
+    simpl in H. discriminate H.
 
   (** Proceed by induction on the assumed derivation showing that
       [loopdef] terminates.  Most of the cases are immediately
