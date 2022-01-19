@@ -1545,9 +1545,8 @@ Inductive ceval : com -> state -> state -> Prop :=
       st  =[ c ]=> st' ->
       st' =[ while b do c end ]=> st'' ->
       st  =[ while b do c end ]=> st''
-  | E_For : forall st st' init st_init b upd iter,
-      st =[ init ]=> st_init ->
-      st_init =[ while b do iter; upd end ]=> st' ->
+  | E_For : forall st st' init b upd iter,
+      st =[ init; while b do iter; upd end ]=> st' ->
       st =[ for (init;; b;; upd) do iter end ]=> st'
 
   where "st =[ c ]=> st'" := (ceval c st st').
@@ -1587,25 +1586,27 @@ Example ceval_for_loop_example_1:
     X !-> 0; Z !-> 1
   ).
 Proof.
-  apply E_For with (st_init :=  X !-> 0; Z !-> 1).
-  - apply E_Seq with (st' := Z !-> 1).
-    + apply E_Asgn. reflexivity.
-    + apply E_Asgn. reflexivity.
-  - apply E_WhileTrue with (st' := X !-> 1; Z !-> 4; X !-> 0; Z !-> 1).
-    + (* beval st b = true *)
-      reflexivity.
-    + apply E_Seq with (st' := Z !-> 4; X !-> 0; Z !-> 1).
+  apply E_For
+    with (st' :=  X !-> 2; Z !-> 7; X !-> 1; Z !-> 4; X !-> 0; Z !-> 1).
+  - apply E_Seq with (st' := X !-> 0; Z !-> 1).
+    + apply E_Seq with (st' := Z !-> 1).
       * apply E_Asgn. reflexivity.
       * apply E_Asgn. reflexivity.
-    + apply E_WhileTrue with
-        (st' := X !-> 2; Z !-> 7; X !-> 1; Z !-> 4; X !-> 0; Z !-> 1).
+    + apply E_WhileTrue with (st' := X !-> 1; Z !-> 4; X !-> 0; Z !-> 1).
       * (* beval st b = true *)
         reflexivity.
-      * apply E_Seq
-          with (st' := Z !-> 7; X !-> 1; Z !-> 4; X !-> 0; Z !-> 1).
+      * apply E_Seq with (st' := Z !-> 4; X !-> 0; Z !-> 1).
         -- apply E_Asgn. reflexivity.
         -- apply E_Asgn. reflexivity.
-      * apply E_WhileFalse. reflexivity.
+      * apply E_WhileTrue with
+          (st' := X !-> 2; Z !-> 7; X !-> 1; Z !-> 4; X !-> 0; Z !-> 1).
+        -- (* beval st b = true *)
+          reflexivity.
+        -- apply E_Seq
+            with (st' := Z !-> 7; X !-> 1; Z !-> 4; X !-> 0; Z !-> 1).
+          ++ apply E_Asgn. reflexivity.
+          ++ apply E_Asgn. reflexivity.
+        -- apply E_WhileFalse. reflexivity.
 Qed.
 
 (** **** Exercise: 2 stars, standard, optional (ceval_example2) *)
@@ -1686,8 +1687,7 @@ Proof.
     rewrite (IHE1_1 st'0 H3) in *.
     apply IHE1_2. assumption.
   - (* E_For *)
-    rewrite <- (IHE1_1 st_init0 H5) in *.
-    apply IHE1_2. assumption.
+    apply IHE1. apply H5.
 Qed.
 
 (* ################################################################# *)
@@ -2106,7 +2106,6 @@ Inductive com : Type :=
   | CAsgn (x : string) (a : aexp)
   | CSeq (c1 c2 : com)
   | CIf (b : bexp) (c1 c2 : com)
-  | CWhile (b : bexp) (c : com).
 
 Notation "'break'" := CBreak (in custom com at level 0).
 Notation "'skip'"  :=
