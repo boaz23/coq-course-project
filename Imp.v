@@ -2106,6 +2106,9 @@ Inductive com : Type :=
   | CAsgn (x : string) (a : aexp)
   | CSeq (c1 c2 : com)
   | CIf (b : bexp) (c1 c2 : com)
+  | CWhile (b : bexp) (c : com)
+  | CFor (c_init : com) (b : bexp) (c_update : com) (c_iter : com)
+.
 
 Notation "'break'" := CBreak (in custom com at level 0).
 Notation "'skip'"  :=
@@ -2124,6 +2127,13 @@ Notation "'if' x 'then' y 'else' z 'end'" :=
 Notation "'while' x 'do' y 'end'" :=
          (CWhile x y)
             (in custom com at level 89, x at level 99, y at level 99) : com_scope.
+Notation "'for' '(' init ';;' b ';;' update ')' 'do' iter 'end'" :=
+         (CFor init b update iter)
+            (in custom com at level 89,
+              init at level 99,
+              b at level 99,
+              update at level 99,
+              iter at level 99) : com_scope.
 
 (** Next, we need to define the behavior of [break].  Informally,
     whenever [break] is executed in a sequence of commands, it stops
@@ -2243,6 +2253,9 @@ Inductive ceval : com -> state -> result -> state -> Prop :=
       beval st b = true ->
       st =[ c ]=> st' / SBreak ->
       st =[ while b do c end ]=> st' / SContinue
+  | E_For : forall st s st' init b upd iter,
+      st =[ init; while b do iter; upd end ]=> st' / s ->
+      st =[ for (init;; b;; upd) do iter end ]=> st' / SContinue
 
   where "st '=[' c ']=>' st' '/' s" := (ceval c st s st').
 
