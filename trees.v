@@ -45,3 +45,21 @@ Example tree_map_example_1 :
       (node (node empty [4; 8] empty) [1; 2] (node empty [5; 10] empty))
   ).
 Proof. reflexivity. Qed.
+
+Theorem list_map_app_split : forall {X Y : Type} (f : X -> Y) (l1 l2 : list X),
+  map f (l1 ++ l2) = map f l1 ++ map f l2.
+Proof.
+  intros X Y f l1. induction l1 as [| x1 l1' IHl1'].
+  - reflexivity.
+  - intros. simpl. rewrite -> (IHl1' l2). reflexivity.
+Qed.
+
+Lemma tree_map_in_order : forall X Y (f: X -> Y) (t : tree X),
+  map f (in_order t) = in_order (tree_map f t).
+Proof.
+  intros. induction t as [| l IHl x r IHr].
+  - reflexivity.
+  - simpl. rewrite <- IHl. rewrite <- IHr.
+    rewrite -> list_map_app_split. simpl.
+    reflexivity.
+Qed.
