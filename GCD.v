@@ -39,7 +39,7 @@ Proof.
 Qed.
 
 Theorem minus_n_O : forall (n : nat),
-  n = n - 0.
+  n - 0 = n.
 Proof.
   intros. destruct n; reflexivity.
 Qed.
@@ -121,6 +121,36 @@ Proof.
     apply lt_le_incl. exact H.
 Qed.
 
+Theorem eq_le_incl : forall (a b : nat),
+  a = b -> a <= b.
+Proof.
+  intros. subst. apply le_n.
+Qed.
+
+Theorem minus_lt : forall (a b : nat),
+  b <= a -> 0 < b -> a - b < a.
+Proof.
+  intros a b H_le H_b; generalize dependent a. unfold lt.
+  induction b; intros.
+  - inversion H_b.
+  - destruct a.
+    + inversion H_le.
+    + simpl. apply le_S_n in H_le. clear H_b.
+      destruct b.
+      * rewrite -> minus_n_O. apply le_n.
+      * apply le_S. apply IHb.
+        -- apply lt_0_n.
+        -- exact H_le.
+Qed.
+
+Theorem minus_lt_S : forall (a b : nat),
+  b < a -> a - S b < a.
+Proof.
+  intros. apply minus_lt.
+  - fold (lt b a). exact H.
+  - unfold lt. apply le_n_S. apply le_0_n.
+Qed.
+
 Theorem nat_minus_split : forall (a b : nat),
   a >= b -> a = (a - b) + b.
 Proof.
@@ -176,8 +206,10 @@ Admitted.
 Lemma case_split_3way P : forall a b,
   (a < b -> P a b) -> (a = b -> P a b) -> (a > b -> P a b) -> P a b.
 Proof.
+(*
   intros a b H_lt H_eq H_gt; generalize dependent a.
   intros.
+  destruct (P a b).
   induction b; simpl; intros.
   - destruct a.
     + apply H_eq. reflexivity.
@@ -185,62 +217,63 @@ Proof.
   - destruct a.
     + apply H_lt. apply lt_0_n.
     + 
+*)
 Admitted.
 
 Definition euclid_terminates_prop   (a b : nat) := exists z, euclid a b z.
 Definition euclid_terminates_prop_S (a b : nat) := exists z, euclid (S a) (S b) z.
 
-Theorem max_le : forall (a b : nat),
-  a <= b -> b = max a b.
+Theorem max_le_r : forall (a b : nat),
+  a <= b -> max a b = b.
 Proof.
   intros a b; generalize dependent a.
   induction b; intros; simpl.
   - rewrite -> (nat_le_0 a H). reflexivity.
-  - destruct a.
+  - destruct a; simpl.
     + reflexivity.
-    + simpl. f_equal. apply IHb. apply le_S_n. exact H.
+    + f_equal. apply IHb. apply le_S_n. exact H.
 Qed.
 
-Theorem max_either : forall (a b : nat),
-  max a b = a \/ max a b = b.
+Theorem max_le_l : forall (a b : nat),
+  b <= a -> max a b = a.
 Proof.
+  intros a b; generalize dependent b.
+  induction a; intros; simpl.
+  - rewrite -> (nat_le_0 b H). reflexivity.
+  - destruct b.
+    + reflexivity.
+    + f_equal. apply IHa. apply le_S_n. exact H.
+Qed.
+
+Definition max_either_prop (a b : nat) := max a b = a \/ max a b = b.
+
+Theorem max_either : forall (a b : nat),
+  max_either_prop a b.
+Proof.
+  intros. apply (case_split_3way max_either_prop); unfold max_either_prop;
+  intros H.
+  - right. apply max_le_r. apply lt_le_incl. exact H.
+  - symmetry in H. left. apply max_le_l. apply eq_le_incl. exact H.
+  - left. apply max_le_l. unfold gt in H. apply lt_le_incl. exact H.
 Admitted.
 
 Theorem max_lt_n : forall (a b n : nat),
   a < n /\ b < n -> max a b < n.
 Proof.
-  intros a b n [H_lt_a H_lt_b]; generalize dependent a; generalize dependent b.
-  induction n; simpl; intros.
-  - destruct a; inversion H_lt_a.
-  - destruct (max_either a b). destruct a; simpl.
-    + exact H_lt_b.
-    + destruct b.
-      * exact H_lt_a.
-      * unfold lt. apply le_S. fold (lt (S (max a b)) n).
-        Print Init.Nat.max.
-  (*
   intros a b n [H_lt_a H_lt_b].
-  destruct a.
-  - simpl. exact H_lt_b.
-  - simpl. destruct b.
-    + exact H_lt_a.
-    +
-  *)
-Admitted.
+  destruct (max_either a b) as [H_max | H_max]; rewrite -> H_max; assumption.
+Qed.
 
 Theorem lt_max_lt_S : forall (a b : nat),
   a < b -> max a (b - S a) < max a b.
 Proof.
-  intros a b H_lt. pose (H_le := (lt_le_incl a b H_lt)).
-  rewrite <- (max_le a b H_le). unfold lt.
-  destruct a.
-  - simpl. destruct b.
-    + inversion H_lt.
-    + simpl. rewrite <- minus_n_O. apply le_n.
-  - simpl. destruct (b - S (S a)) eqn:E_b_m_SSa.
-    + fold (lt (S a) b). exact H_lt.
-    + simpl.
-Admitted.
+  intros a b H_lt.
+  rewrite -> (max_le_r a b).
+  - apply max_lt_n. split.
+    + exact H_lt.
+    + apply minus_lt_S. exact H_lt.
+  - apply lt_le_incl. exact H_lt.
+Qed.
 
 Theorem nat_S_of_minus_S : forall (a b : nat),
   a < b -> S (b - S a) = b - a.
