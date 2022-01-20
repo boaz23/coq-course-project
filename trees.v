@@ -67,16 +67,15 @@ Qed.
 Definition injective {A B} (f : A -> B) :=
   forall x y : A, f x = f y -> x = y.
 
-Theorem tree_map_injective : forall {X Y : Type} (f : X -> Y) (t1 t2 : tree X),
-  injective f -> tree_map f t1 = tree_map f t2 -> t1 = t2.
+Theorem tree_map_injective : forall {X Y : Type} (f : X -> Y),
+  injective f -> injective (tree_map f).
 Proof.
-  intros X Y f t1 t2 f_injective; generalize dependent t2.
+  intros X Y f H_f_injective t1 t2; generalize dependent t2.
   induction t1 as [| l1 IHl1 x1 r1 IHr1]; simpl;
   intros t2; destruct t2 as [| l2 x2 r2]; simpl; try discriminate.
   - reflexivity.
-  - intros H. injection H.
-    intros H_eq_map_r H_eq_x H_eq_map_l.
-    rewrite <- (IHl1 l2 H_eq_map_l). rewrite <- (f_injective x1 x2 H_eq_x).
+  - intros H. injection H as H_eq_map_l H_eq_x H_eq_map_r.
+    rewrite <- (IHl1 l2 H_eq_map_l). rewrite <- (H_f_injective x1 x2 H_eq_x).
     rewrite <- (IHr1 r2 H_eq_map_r). reflexivity.
 Qed.
 
