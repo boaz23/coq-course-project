@@ -124,6 +124,9 @@ Proof.
     + apply gt_ge_incl. unfold gt. exact H_a_lt_b.
 Qed.
 
+Definition noether_max_h P a b :=
+  (forall a' b', max a' b' < max a b -> P a' b') -> P a b.
+
 Lemma noehter_max P :
   (forall a b, (forall a' b', max a' b' < max a b -> P a' b') -> P a b) ->
   forall a b, P a b.
@@ -135,8 +138,49 @@ Proof.
 (* FILL IN HERE *)
 Admitted.
 
+Definition euclid_terminates_prop   (a b : nat) := exists z, euclid a b z.
+Definition euclid_terminates_prop_S (a b : nat) := exists z, euclid (S a) (S b) z.
+
+Theorem max_lt : forall (a b : nat),
+  a <= b -> b = max a b.
+Proof.
+  intros a b; generalize dependent a.
+  induction b; intros; simpl.
+  - rewrite -> (nat_le_0 a H). reflexivity.
+  - destruct a.
+    + reflexivity.
+    + simpl. f_equal. apply IHb. apply le_S_n. exact H.
+Qed.
+
+
+Theorem noether_max_euclid_terminates : forall (a b : nat),
+  noether_max_h euclid_terminates_prop_S a b.
+Proof.
+(*
+  unfold noether_max_h. pose (P := euclid_terminates_prop).
+  unfold euclid_terminates_prop.
+  intros a b H_a H_b H_noether_max.
+  destruct a.
+  - inversion H_a.
+  - destruct b.
+    + inversion H_b.
+    +
+  apply (case_split_3way P).
+  - intros H_lt. (*rewrite <- (max_lt a b (lt_le_incl a b H_lt)) in *.*)
+  - intros H_eq. symmetry in H_eq. subst.
+    exists a. apply stop.
+  - intros H_gt. give_up.
+*)
+Admitted.
+
 Theorem euclid_terminates : forall a b,
   a > 0 -> b > 0 -> exists z, euclid a b z.
 Proof.
-(* FILL IN HERE *)
+  intros a b H_a H_b.
+  pose (P := euclid_terminates_prop_S).
+  destruct a.
+  - inversion H_a.
+  - destruct b.
+    + inversion H_b.
+    + apply (noehter_max P). apply noether_max_euclid_terminates.
 Admitted.
