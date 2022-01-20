@@ -38,12 +38,26 @@ Proof.
   - symmetry. rewrite -> IHn. apply add_succ_r.
 Qed.
 
+Theorem minus_n_O : forall (n : nat),
+  n = n - 0.
+Proof.
+  intros. destruct n; reflexivity.
+Qed.
+
 Theorem nat_le_0 : forall (b : nat),
   b <= 0 -> b = 0.
 Proof.
   intros. destruct b.
   - reflexivity.
   - inversion H.
+Qed.
+
+Theorem le_0_n : forall (b : nat),
+  0 <= b.
+Proof.
+  intros. induction b.
+  - apply le_n.
+  - apply le_S. exact IHb.
 Qed.
 
 Theorem le_n_S : forall (a b : nat),
@@ -67,14 +81,6 @@ Proof.
   - apply le_S. apply IHb'. exact H1.
 Qed.
 
-Theorem le_0_n : forall (b : nat),
-  0 <= b.
-Proof.
-  intros. induction b.
-  - apply le_n.
-  - apply le_S. exact IHb.
-Qed.
-
 Theorem lt_le_incl : forall (a b : nat),
   a < b -> a <= b.
 Proof.
@@ -84,6 +90,26 @@ Proof.
     + inversion H.
     + apply le_S_n in H.
       apply le_S. exact H.
+Qed.
+
+Theorem lt_n_S : forall (a b : nat),
+  a < b -> S a < S b.
+Proof.
+  intros. unfold lt in *.
+  apply le_n_S. exact H.
+Qed.
+
+Theorem lt_S_n : forall (a b : nat),
+  S a < S b -> a < b.
+Proof.
+  intros. unfold lt in *.
+  apply le_S_n. exact H.
+Qed.
+
+Theorem lt_0_n : forall (n : nat),
+  0 < S n.
+Proof.
+  intros. unfold lt. apply le_n_S. apply le_0_n.
 Qed.
 
 Theorem gt_ge_incl : forall (a b : nat),
@@ -141,7 +167,7 @@ Admitted.
 Definition euclid_terminates_prop   (a b : nat) := exists z, euclid a b z.
 Definition euclid_terminates_prop_S (a b : nat) := exists z, euclid (S a) (S b) z.
 
-Theorem max_lt : forall (a b : nat),
+Theorem max_le : forall (a b : nat),
   a <= b -> b = max a b.
 Proof.
   intros a b; generalize dependent a.
