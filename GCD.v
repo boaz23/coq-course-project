@@ -275,10 +275,26 @@ Proof.
   - apply lt_le_incl. exact H_lt.
 Qed.
 
+Theorem nat_minus_1 : forall (b : nat),
+  b > 0 -> S (b - 1) = b.
+Proof.
+  intros b H_gt. destruct b.
+  - inversion H_gt.
+  - clear H_gt. simpl. rewrite -> minus_n_O. reflexivity.
+Qed.
+
 Theorem nat_S_of_minus_S : forall (a b : nat),
   a < b -> S (b - S a) = b - a.
 Proof.
-Admitted.
+  intros a b H_lt; generalize dependent b.
+  induction a; intros.
+  - rewrite -> nat_minus_1.
+    + rewrite -> minus_n_O. reflexivity.
+    + unfold gt. exact H_lt.
+  - destruct b.
+    + inversion H_lt.
+    + simpl. apply IHa. apply lt_S_n. exact H_lt.
+Qed.
 
 Theorem noether_max_euclid_terminates : forall (a b : nat),
   noether_max_h euclid_terminates_prop_S a b.
