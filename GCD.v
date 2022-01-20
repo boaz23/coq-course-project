@@ -158,10 +158,33 @@ Lemma noehter_max P :
   forall a b, P a b.
 Admitted.
 
+Theorem nat_order_decideable : forall (a b : nat),
+  a < b \/ a = b \/ a > b.
+Proof.
+  intros a b; generalize dependent a.
+  induction b; simpl; intros.
+  - destruct a.
+    + right. left. reflexivity.
+    + right. right. unfold gt. apply lt_0_n.
+  - destruct (IHb a).
+    + left. unfold lt. apply le_n_S. apply lt_le_incl. exact H.
+    + destruct H.
+      * left. unfold lt. give_up.
+      * give_up.
+Admitted.
+
 Lemma case_split_3way P : forall a b,
   (a < b -> P a b) -> (a = b -> P a b) -> (a > b -> P a b) -> P a b.
 Proof.
-(* FILL IN HERE *)
+  intros a b H_lt H_eq H_gt; generalize dependent a.
+  intros.
+  induction b; simpl; intros.
+  - destruct a.
+    + apply H_eq. reflexivity.
+    + apply H_gt. unfold gt. apply lt_0_n.
+  - destruct a.
+    + apply H_lt. apply lt_0_n.
+    + 
 Admitted.
 
 Definition euclid_terminates_prop   (a b : nat) := exists z, euclid a b z.
@@ -178,25 +201,72 @@ Proof.
     + simpl. f_equal. apply IHb. apply le_S_n. exact H.
 Qed.
 
+Theorem max_either : forall (a b : nat),
+  max a b = a \/ max a b = b.
+Proof.
+Admitted.
+
+Theorem max_lt_n : forall (a b n : nat),
+  a < n /\ b < n -> max a b < n.
+Proof.
+  intros a b n [H_lt_a H_lt_b]; generalize dependent a; generalize dependent b.
+  induction n; simpl; intros.
+  - destruct a; inversion H_lt_a.
+  - destruct (max_either a b). destruct a; simpl.
+    + exact H_lt_b.
+    + destruct b.
+      * exact H_lt_a.
+      * unfold lt. apply le_S. fold (lt (S (max a b)) n).
+        Print Init.Nat.max.
+  (*
+  intros a b n [H_lt_a H_lt_b].
+  destruct a.
+  - simpl. exact H_lt_b.
+  - simpl. destruct b.
+    + exact H_lt_a.
+    +
+  *)
+Admitted.
+
+Theorem lt_max_lt_S : forall (a b : nat),
+  a < b -> max a (b - S a) < max a b.
+Proof.
+  intros a b H_lt. pose (H_le := (lt_le_incl a b H_lt)).
+  rewrite <- (max_le a b H_le). unfold lt.
+  destruct a.
+  - simpl. destruct b.
+    + inversion H_lt.
+    + simpl. rewrite <- minus_n_O. apply le_n.
+  - simpl. destruct (b - S (S a)) eqn:E_b_m_SSa.
+    + fold (lt (S a) b). exact H_lt.
+    + simpl.
+Admitted.
+
+Theorem nat_S_of_minus_S : forall (a b : nat),
+  a < b -> S (b - S a) = b - a.
+Proof.
+Admitted.
 
 Theorem noether_max_euclid_terminates : forall (a b : nat),
   noether_max_h euclid_terminates_prop_S a b.
 Proof.
-(*
-  unfold noether_max_h. pose (P := euclid_terminates_prop).
-  unfold euclid_terminates_prop.
-  intros a b H_a H_b H_noether_max.
-  destruct a.
-  - inversion H_a.
-  - destruct b.
-    + inversion H_b.
-    +
-  apply (case_split_3way P).
-  - intros H_lt. (*rewrite <- (max_lt a b (lt_le_incl a b H_lt)) in *.*)
-  - intros H_eq. symmetry in H_eq. subst.
-    exists a. apply stop.
+  unfold noether_max_h. unfold euclid_terminates_prop_S.
+  pose (P := euclid_terminates_prop_S).
+  intros a b H_noether_max.
+  apply (case_split_3way P); unfold P;
+  unfold euclid_terminates_prop_S.
+  - intros H_lt.
+    destruct (H_noether_max a (b - S a)) as [x H_euclid].
+    + apply lt_max_lt_S. exact H_lt.
+    + exists x. apply step_b.
+      * apply lt_n_S. exact H_lt.
+      * simpl. rewrite -> nat_S_of_minus_S in H_euclid.
+        -- exact H_euclid.
+        -- exact H_lt.
+  - intros H_eq. symmetry in H_eq. subst b. subst m.
+    rewrite <- H_n_eq_Sa in *.
+    exists n. apply stop.
   - intros H_gt. give_up.
-*)
 Admitted.
 
 Theorem euclid_terminates : forall a b,
