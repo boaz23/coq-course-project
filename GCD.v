@@ -59,6 +59,25 @@ Proof.
   - apply le_S. apply IHb'. exact H1.
 Qed.
 
+Theorem nat_0_le_n : forall (b : nat),
+  0 <= b.
+Proof.
+  intros. induction b.
+  - apply le_n.
+  - apply le_S. exact IHb.
+Qed.
+
+Theorem nat_lt_implies_le : forall (a b : nat),
+  a < b -> a <= b.
+Proof.
+  intros a. destruct a; intros.
+  - apply nat_0_le_n.
+  - unfold lt in *. destruct b.
+    + inversion H.
+    + apply nat_le_S_implies_le in H.
+      apply le_S. exact H.
+Qed.
+
 Theorem nat_gt_implies_gte : forall (a b : nat),
   a > b -> a >= b.
 Proof.
@@ -67,6 +86,8 @@ Proof.
   - unfold ge in *. unfold gt in *.  unfold lt in *.
     apply le_S. apply nat_le_S_implies_le in H.
     exact H.
+  - unfold ge in *. unfold gt in *.
+    apply nat_lt_implies_le. exact H.
 Qed.
 
 Theorem nat_minus_split : forall (a b : nat),
