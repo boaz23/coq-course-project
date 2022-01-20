@@ -39,6 +39,7 @@ Proof.
 Qed.
 
 Theorem nat_lte_0_then_eq_0 : forall (b : nat),
+Theorem nat_le_0 : forall (b : nat),
   b <= 0 -> b = 0.
 Proof.
   intros. destruct b.
@@ -47,6 +48,7 @@ Proof.
 Qed.
 
 Theorem nat_le_S_implies_le : forall (a b : nat),
+Theorem le_S_n : forall (a b : nat),
   S a <= S b -> a <= b.
 Proof.
   intros a b; generalize dependent a.
@@ -54,12 +56,14 @@ Proof.
   (* b = 0 *)
   - apply le_n.
   - apply nat_lte_0_then_eq_0 in H1. discriminate H1.
+  - apply nat_le_0 in H1. discriminate H1.
   (* b = S b' *)
   - apply le_n.
   - apply le_S. apply IHb'. exact H1.
 Qed.
 
 Theorem nat_0_le_n : forall (b : nat),
+Theorem le_0_n : forall (b : nat),
   0 <= b.
 Proof.
   intros. induction b.
@@ -68,17 +72,21 @@ Proof.
 Qed.
 
 Theorem nat_lt_implies_le : forall (a b : nat),
+Theorem lt_le_incl : forall (a b : nat),
   a < b -> a <= b.
 Proof.
   intros a. destruct a; intros.
   - apply nat_0_le_n.
+  - apply le_0_n.
   - unfold lt in *. destruct b.
     + inversion H.
     + apply nat_le_S_implies_le in H.
+    + apply le_S_n in H.
       apply le_S. exact H.
 Qed.
 
 Theorem nat_gt_implies_gte : forall (a b : nat),
+Theorem gt_ge_incl : forall (a b : nat),
   a > b -> a >= b.
 Proof.
   intros a. destruct a; intros.
@@ -88,6 +96,7 @@ Proof.
     exact H.
   - unfold ge in *. unfold gt in *.
     apply nat_lt_implies_le. exact H.
+    apply lt_le_incl. exact H.
 Qed.
 
 Theorem nat_minus_split : forall (a b : nat),
@@ -95,11 +104,13 @@ Theorem nat_minus_split : forall (a b : nat),
 Proof.
   intros a. induction a as [| a' IHa']; intros.
   - unfold ge in H. rewrite -> (nat_lte_0_then_eq_0 b H).
+  - unfold ge in H. rewrite -> (nat_le_0 b H).
     reflexivity.
   - destruct b as [| b'].
     + simpl. rewrite <- plus_n_O. reflexivity.
     + simpl. rewrite -> add_succ_r. f_equal.
       apply nat_le_S_implies_le in H. apply IHa'.
+      apply le_S_n in H. apply IHa'.
       unfold ge. exact H.
 Qed.
 
@@ -114,9 +125,11 @@ Proof.
   - rewrite -> (nat_minus_split a b).
     + apply step_a'. exact IH.
     + apply nat_gt_implies_gte. exact H_a_gt_b.
+    + apply gt_ge_incl. exact H_a_gt_b.
   - rewrite -> (nat_minus_split b a).
     + rewrite plus_comm. apply step_b'. exact IH.
     + apply nat_gt_implies_gte. unfold gt. exact H_a_lt_b.
+    + apply gt_ge_incl. unfold gt. exact H_a_lt_b.
 Qed.
 
 Lemma noehter_max P :
