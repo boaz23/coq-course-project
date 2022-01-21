@@ -1180,7 +1180,9 @@ Inductive com : Type :=
   | CAsgn (x : string) (a : aexp)
   | CSeq (c1 c2 : com)
   | CIf (b : bexp) (c1 c2 : com)
-  | CWhile (b : bexp) (c : com).
+  | CWhile (b : bexp) (c : com)
+  | CFor (c_init : com) (b : bexp) (c_update : com) (c_iter : com)
+.
 
 (** As we did for expressions, we can use a few [Notation]
     declarations to make reading and writing Imp programs more
@@ -1202,6 +1204,13 @@ Notation "'if' x 'then' y 'else' z 'end'" :=
 Notation "'while' x 'do' y 'end'" :=
          (CWhile x y)
             (in custom com at level 89, x at level 99, y at level 99) : com_scope.
+Notation "'for' '(' init ';;' b ';;' update ')' 'do' iter 'end'" :=
+         (CFor init b update iter)
+            (in custom com at level 89,
+              init at level 99,
+              b at level 99,
+              update at level 99,
+              iter at level 99) : com_scope.
 
 (** For example, here is the factorial function again, written as a
     formal Coq definition.  When this command terminates, the variable
@@ -1216,6 +1225,33 @@ Definition fact_in_coq : com :=
      end }>.
 
 Print fact_in_coq.
+
+Definition imp_for_loop_notation_test : com :=
+  <{
+    X := 1;
+    while true do skip end;
+    for (W := 0;; W <= 9;; W := W + 1) do
+      X := 2 * X
+    end
+  }>
+.
+
+Definition imp_for_loop_notation_test_2 : com :=
+  <{
+    X := 1;
+    while true do skip end;
+    for (
+      for (W := 1;; true;; Z := Z + 1) do skip end;;
+      W <= 9;;
+      W := W + 1
+    ) do
+      X := 2 * X
+    end
+  }>
+.
+
+Check imp_for_loop_notation_test : com.
+Print imp_for_loop_notation_test.
 
 (* ================================================================= *)
 (** ** Desugaring Notations *)
@@ -1378,6 +1414,8 @@ Fixpoint ceval_fun_no_while (st : state) (c : com) : state :=
           else ceval_fun_no_while st c2
     | <{ while b do c end }> =>
         st  (* bogus *)
+    | <{ for (init;; b;; update) do iter end }> =>
+        st  (* bogus *)
   end.
 
 (** In a more conventional functional programming language like OCaml or
@@ -1507,6 +1545,9 @@ Inductive ceval : com -> state -> state -> Prop :=
       st  =[ c ]=> st' ->
       st' =[ while b do c end ]=> st'' ->
       st  =[ while b do c end ]=> st''
+  | E_For : forall st st' init b upd iter,
+      st =[ init; while b do iter; upd end ]=> st' ->
+      st =[ for (init;; b;; upd) do iter end ]=> st'
 
   where "st =[ c ]=> st'" := (ceval c st st').
 
@@ -1532,6 +1573,40 @@ Proof.
     apply E_IfFalse.
     reflexivity.
     apply E_Asgn. reflexivity.
+Qed.
+
+Example ceval_for_loop_example_1:
+  empty_st =[
+    for (Z:= 1; X := 0;; X <= 1;; X := X + 1) do
+      Z := Z + 3
+    end
+  ]=> (
+    X !-> 2; Z !-> 7;
+    X !-> 1; Z !-> 4;
+    X !-> 0; Z !-> 1
+  ).
+Proof.
+  apply E_For
+    with (st' :=  X !-> 2; Z !-> 7; X !-> 1; Z !-> 4; X !-> 0; Z !-> 1).
+  - apply E_Seq with (st' := X !-> 0; Z !-> 1).
+    + apply E_Seq with (st' := Z !-> 1).
+      * apply E_Asgn. reflexivity.
+      * apply E_Asgn. reflexivity.
+    + apply E_WhileTrue with (st' := X !-> 1; Z !-> 4; X !-> 0; Z !-> 1).
+      * (* beval st b = true *)
+        reflexivity.
+      * apply E_Seq with (st' := Z !-> 4; X !-> 0; Z !-> 1).
+        -- apply E_Asgn. reflexivity.
+        -- apply E_Asgn. reflexivity.
+      * apply E_WhileTrue with
+          (st' := X !-> 2; Z !-> 7; X !-> 1; Z !-> 4; X !-> 0; Z !-> 1).
+        -- (* beval st b = true *)
+          reflexivity.
+        -- apply E_Seq
+            with (st' := Z !-> 7; X !-> 1; Z !-> 4; X !-> 0; Z !-> 1).
+          ++ apply E_Asgn. reflexivity.
+          ++ apply E_Asgn. reflexivity.
+        -- apply E_WhileFalse. reflexivity.
 Qed.
 
 (** **** Exercise: 2 stars, standard, optional (ceval_example2) *)
@@ -1610,7 +1685,10 @@ Proof.
     rewrite H in H4. discriminate.
   - (* E_WhileTrue, b evaluates to true *)
     rewrite (IHE1_1 st'0 H3) in *.
-    apply IHE1_2. assumption.  Qed.
+    apply IHE1_2. assumption.
+  - (* E_For *)
+    apply IHE1. apply H5.
+Qed.
 
 (* ################################################################# *)
 (** * Reasoning About Imp Programs *)
@@ -1689,6 +1767,8 @@ Fixpoint no_whiles (c : com) : bool :=
       andb (no_whiles ct) (no_whiles cf)
   | <{ while _ do _ end }>  =>
       false
+  | <{ for (_;; _;; _) do _ end }> =>
+      false
   end.
 
 (** This predicate yields [true] just on programs that have no while
@@ -1740,9 +1820,7 @@ Theorem n_while_eqv_fixpoint_to_R:
 Proof.
   intros c H_no_whiles. 
   induction c; simpl in H_no_whiles;
-  try constructor; try apply_hyp_bool_andb.
-  (* while *)
-  - discriminate.
+  try constructor; try apply_hyp_bool_andb; try discriminate.
 Qed.
 
 Ltac bool_andb_goal :=
@@ -2028,7 +2106,9 @@ Inductive com : Type :=
   | CAsgn (x : string) (a : aexp)
   | CSeq (c1 c2 : com)
   | CIf (b : bexp) (c1 c2 : com)
-  | CWhile (b : bexp) (c : com).
+  | CWhile (b : bexp) (c : com)
+  | CFor (c_init : com) (b : bexp) (c_update : com) (c_iter : com)
+.
 
 Notation "'break'" := CBreak (in custom com at level 0).
 Notation "'skip'"  :=
@@ -2047,6 +2127,13 @@ Notation "'if' x 'then' y 'else' z 'end'" :=
 Notation "'while' x 'do' y 'end'" :=
          (CWhile x y)
             (in custom com at level 89, x at level 99, y at level 99) : com_scope.
+Notation "'for' '(' init ';;' b ';;' update ')' 'do' iter 'end'" :=
+         (CFor init b update iter)
+            (in custom com at level 89,
+              init at level 99,
+              b at level 99,
+              update at level 99,
+              iter at level 99) : com_scope.
 
 (** Next, we need to define the behavior of [break].  Informally,
     whenever [break] is executed in a sequence of commands, it stops
@@ -2166,6 +2253,9 @@ Inductive ceval : com -> state -> result -> state -> Prop :=
       beval st b = true ->
       st =[ c ]=> st' / SBreak ->
       st =[ while b do c end ]=> st' / SContinue
+  | E_For : forall st s st' init b upd iter,
+      st =[ init; while b do iter; upd end ]=> st' / s ->
+      st =[ for (init;; b;; upd) do iter end ]=> st' / SContinue
 
   where "st '=[' c ']=>' st' '/' s" := (ceval c st s st').
 
