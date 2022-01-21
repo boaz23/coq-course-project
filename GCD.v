@@ -214,13 +214,13 @@ Proof.
     + apply gt_ge_incl. unfold gt. exact H_a_lt_b.
 Qed.
 
-Definition noether_max_h P a b :=
-  (forall a' b', max a' b' < max a b -> P a' b') -> P a b.
-
 Lemma noehter_max P :
   (forall a b, (forall a' b', max a' b' < max a b -> P a' b') -> P a b) ->
   forall a b, P a b.
 Admitted.
+
+Definition noether_max_h P a b :=
+  (forall a' b', max a' b' < max a b -> P a' b') -> P a b.
 
 Theorem nat_order_decideable : forall (a b : nat),
   a < b \/ a = b \/ a > b.
@@ -258,6 +258,27 @@ Admitted.
 
 Definition euclid_terminates_prop_S (a b : nat) :=
   exists z, euclid (S a) (S b) z.
+
+Theorem euclid_symm_aux : forall (a b z : nat),
+  euclid a b z -> euclid b a z.
+Proof.
+  intros. induction H as [
+    z
+    | a b z H_order H_euclid
+    | a b z H_order H_euclid
+  ]; simpl;
+  [apply stop | apply step_b | apply step_a];
+  try (apply H_order; exact H_order);
+  try exact IHH_euclid.
+Qed.
+
+Theorem euclid_symm : forall (a b z : nat),
+  euclid a b z <-> euclid b a z.
+Proof.
+  intros. split.
+  - apply (euclid_symm_aux a b).
+  - apply (euclid_symm_aux b a).
+Qed.
 
 Theorem max_symm : forall (a b : nat),
   max a b = max b a.
@@ -352,12 +373,10 @@ Proof.
   unfold noether_max_h. unfold euclid_terminates_prop_S.
   intros a b H_lt H_noether_max.
   destruct (H_noether_max a (b - S a)) as [x H_euclid].
-    + apply lt_max_lt_S_r. exact H_lt.
-    + exists x. apply step_b.
-      * apply lt_n_S. exact H_lt.
-      * simpl. rewrite -> nat_S_of_minus_S in H_euclid.
-        -- exact H_euclid.
-        -- exact H_lt.
+  - apply lt_max_lt_S_r. exact H_lt.
+  - exists x. apply step_b.
+    + apply lt_n_S. exact H_lt.
+    + simpl. rewrite -> nat_S_of_minus_S in H_euclid; assumption.
 Qed.
 
 Theorem find_euclid_n_eq : forall (a b : nat),
@@ -372,15 +391,11 @@ Qed.
 Theorem find_euclid_n_gt : forall (a b : nat),
   a > b -> noether_max_h euclid_terminates_prop_S a b.
 Proof.
-  unfold noether_max_h. unfold euclid_terminates_prop_S.
   intros a b H_gt H_noether_max.
-  destruct (H_noether_max (a - S b) b) as [x H_euclid].
-    + apply lt_max_lt_S_l. exact H_gt.
-    + exists x. apply step_a.
-      * apply lt_n_S. exact H_gt.
-      * simpl. rewrite -> nat_S_of_minus_S in H_euclid.
-        -- exact H_euclid.
-        -- exact H_gt.
+  rewrite -> max_symm in H_noether_max.
+  pose (H_z := find_euclid_n_lt b a).
+  destruct H_z; auto. unfold euclid_terminates_prop_S.
+  exists x. apply (euclid_symm_aux (S b) (S a) x). exact H.
 Qed.
 
 Theorem find_euclid_n : forall (a b : nat),
