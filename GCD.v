@@ -252,6 +252,8 @@ Qed.
 
   All of these are marked as Qed at the end
   (except the case_split_3way ofcourse).
+
+  See the lemma below it to see a refined proved version.
 *)
 Lemma case_split_3way P : forall a b,
   (a < b -> P a b) -> (a = b -> P a b) -> (a > b -> P a b) -> P a b.
