@@ -237,7 +237,7 @@ Qed.
   written (exactly) in the project specification.
   On the left of an arrow is a theorem which is proved
   and on the right of the arrow is a comma-seperated list of
-  the theorems which were used in order to prove it.
+  the theorems which are used in order to prove it.
 
   euclid_terminates -> find_euclid_n
   find_euclid_n     -> find_euclid_n_gt, find_euclid_n_lt, case_split_3way
@@ -248,7 +248,7 @@ Qed.
   max_either        -> case_split_3way
 
   For example, to prove euclid_terminates, I used find_euclid_n
-  which itself used case_split_3way transitively.
+  which itself uses case_split_3way transitively.
 
   All of these are marked as Qed at the end
   (except the case_split_3way ofcourse).
