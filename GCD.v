@@ -242,19 +242,19 @@ Qed.
 Lemma case_split_3way P : forall a b,
   (a < b -> P a b) -> (a = b -> P a b) -> (a > b -> P a b) -> P a b.
 Proof.
-(*
-  intros a b H_lt H_eq H_gt; generalize dependent a.
-  intros.
-  destruct (P a b).
-  induction b; simpl; intros.
-  - destruct a.
-    + apply H_eq. reflexivity.
-    + apply H_gt. unfold gt. apply lt_0_n.
-  - destruct a.
-    + apply H_lt. apply lt_0_n.
-    + 
-*)
 Admitted.
+
+(*
+  Slightly different wording to allow destructing on the deciadablity of the
+  natural numbers.
+*)
+Lemma case_split_3way' (P : nat -> nat -> Prop) : forall a b,
+  (a < b -> P a b) -> (a = b -> P a b) -> (a > b -> P a b) -> P a b.
+Proof.
+  intros a b H_P_lt H_P_eq H_P_gt.
+  destruct (nat_order_decideable a b) as [H | [H | H]];
+  [apply H_P_lt | apply H_P_eq | apply H_P_gt]; exact H.
+Qed.
 
 Definition euclid_terminates_prop_S (a b : nat) :=
   exists z, euclid (S a) (S b) z.
