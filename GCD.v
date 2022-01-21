@@ -220,8 +220,18 @@ Proof.
 *)
 Admitted.
 
-Definition euclid_terminates_prop   (a b : nat) := exists z, euclid a b z.
-Definition euclid_terminates_prop_S (a b : nat) := exists z, euclid (S a) (S b) z.
+Definition euclid_terminates_prop_S (a b : nat) :=
+  exists z, euclid (S a) (S b) z.
+
+Theorem max_symm : forall (a b : nat),
+  max a b = max b a.
+Proof.
+  intros a. induction a; simpl; intros.
+  - destruct b; reflexivity.
+  - destruct b; simpl.
+    + reflexivity.
+    + f_equal. apply IHa.
+Qed.
 
 Theorem max_le_r : forall (a b : nat),
   a <= b -> max a b = b.
@@ -237,12 +247,7 @@ Qed.
 Theorem max_le_l : forall (a b : nat),
   b <= a -> max a b = a.
 Proof.
-  intros a b; generalize dependent b.
-  induction a; intros; simpl.
-  - rewrite -> (nat_le_0 b H). reflexivity.
-  - destruct b.
-    + reflexivity.
-    + f_equal. apply IHa. apply le_S_n. exact H.
+  intros. rewrite -> max_symm. apply max_le_r. exact H.
 Qed.
 
 Definition max_either_prop (a b : nat) := max a b = a \/ max a b = b.
@@ -261,10 +266,11 @@ Theorem max_lt_n : forall (a b n : nat),
   a < n /\ b < n -> max a b < n.
 Proof.
   intros a b n [H_lt_a H_lt_b].
-  destruct (max_either a b) as [H_max | H_max]; rewrite -> H_max; assumption.
+  destruct (max_either a b) as [H_max | H_max];
+  rewrite -> H_max; assumption.
 Qed.
 
-Theorem lt_max_lt_S : forall (a b : nat),
+Theorem lt_max_lt_S_r : forall (a b : nat),
   a < b -> max a (b - S a) < max a b.
 Proof.
   intros a b H_lt.
@@ -273,6 +279,14 @@ Proof.
     + exact H_lt.
     + apply minus_lt_S. exact H_lt.
   - apply lt_le_incl. exact H_lt.
+Qed.
+
+Theorem lt_max_lt_S_l : forall (a b : nat),
+  a > b -> max (a - S b) b < max a b.
+Proof.
+  intros a b H_gt. unfold gt in H_gt.
+  rewrite (max_symm (a - S b) b). rewrite (max_symm a b).
+  apply (lt_max_lt_S_r b a). exact H_gt.
 Qed.
 
 Theorem nat_minus_1 : forall (b : nat),
@@ -296,27 +310,57 @@ Proof.
     + simpl. apply IHa. apply lt_S_n. exact H_lt.
 Qed.
 
-Theorem noether_max_euclid_terminates : forall (a b : nat),
+Theorem find_euclid_n_lt : forall (a b : nat),
+  a < b -> noether_max_h euclid_terminates_prop_S a b.
+Proof.
+  unfold noether_max_h. unfold euclid_terminates_prop_S.
+  intros a b H_lt H_noether_max.
+  destruct (H_noether_max a (b - S a)) as [x H_euclid].
+    + apply lt_max_lt_S_r. exact H_lt.
+    + exists x. apply step_b.
+      * apply lt_n_S. exact H_lt.
+      * simpl. rewrite -> nat_S_of_minus_S in H_euclid.
+        -- exact H_euclid.
+        -- exact H_lt.
+Qed.
+
+Theorem find_euclid_n_eq : forall (a b : nat),
+  a = b -> noether_max_h euclid_terminates_prop_S a b.
+Proof.
+  unfold noether_max_h. unfold euclid_terminates_prop_S.
+  intros a b H_eq H_noether_max.
+  symmetry in H_eq. subst b.
+  exists (S a). apply stop.
+Qed.
+
+Theorem find_euclid_n_gt : forall (a b : nat),
+  a > b -> noether_max_h euclid_terminates_prop_S a b.
+Proof.
+  unfold noether_max_h. unfold euclid_terminates_prop_S.
+  intros a b H_gt H_noether_max.
+  destruct (H_noether_max (a - S b) b) as [x H_euclid].
+    + apply lt_max_lt_S_l. exact H_gt.
+    + exists x. apply step_a.
+      * apply lt_n_S. exact H_gt.
+      * simpl. rewrite -> nat_S_of_minus_S in H_euclid.
+        -- exact H_euclid.
+        -- exact H_gt.
+Qed.
+
+Theorem find_euclid_n : forall (a b : nat),
   noether_max_h euclid_terminates_prop_S a b.
 Proof.
   unfold noether_max_h. unfold euclid_terminates_prop_S.
   pose (P := euclid_terminates_prop_S).
   intros a b H_noether_max.
   apply (case_split_3way P); unfold P;
-  unfold euclid_terminates_prop_S.
-  - intros H_lt.
-    destruct (H_noether_max a (b - S a)) as [x H_euclid].
-    + apply lt_max_lt_S. exact H_lt.
-    + exists x. apply step_b.
-      * apply lt_n_S. exact H_lt.
-      * simpl. rewrite -> nat_S_of_minus_S in H_euclid.
-        -- exact H_euclid.
-        -- exact H_lt.
-  - intros H_eq. symmetry in H_eq. subst b. subst m.
-    rewrite <- H_n_eq_Sa in *.
-    exists n. apply stop.
-  - intros H_gt. give_up.
-Admitted.
+  unfold euclid_terminates_prop_S;
+  intros H_order; [
+    apply find_euclid_n_lt
+    | apply find_euclid_n_eq
+    | apply find_euclid_n_gt
+  ]; auto.
+Qed.
 
 Theorem euclid_terminates : forall a b,
   a > 0 -> b > 0 -> exists z, euclid a b z.
@@ -327,5 +371,5 @@ Proof.
   - inversion H_a.
   - destruct b.
     + inversion H_b.
-    + apply (noehter_max P). apply noether_max_euclid_terminates.
+    + apply (noehter_max P). apply find_euclid_n.
 Admitted.
