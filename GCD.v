@@ -106,6 +106,13 @@ Proof.
   apply le_S_n. exact H.
 Qed.
 
+Theorem lt_lt_succ_r : forall (a b : nat),
+  a < b -> a < S b.
+Proof.
+  intros a b H_lt.
+  unfold lt. apply le_n_S. apply lt_le_incl. exact H_lt.
+Qed.
+
 Theorem lt_0_n : forall (n : nat),
   0 < S n.
 Proof.
@@ -125,6 +132,33 @@ Theorem eq_le_incl : forall (a b : nat),
   a = b -> a <= b.
 Proof.
   intros. subst. apply le_n.
+Qed.
+
+Theorem lt_succ_diag_r : forall (a : nat),
+  a < S a.
+Proof.
+  intros a.
+  unfold lt. apply le_n_S. apply le_n.
+Qed.
+
+Theorem le_eq_or_S_le : forall (a b : nat),
+  b <= a -> b = a \/ S b <= a.
+Proof.
+  intros a b H.
+  destruct a.
+  - rewrite -> (nat_le_0 b).
+    + left. reflexivity.
+    + exact H.
+  - inversion H as [H1 | A H1 B]; clear H; rename H1 into H; subst.
+    + left. reflexivity.
+    + right. apply le_n_S. exact H.
+Qed.
+
+Theorem gt_ge_succ_r : forall (a b : nat),
+  a > b -> S b = a \/ a > S b.
+Proof.
+  unfold gt. unfold lt. intros a b H.
+  apply (le_eq_or_S_le a (S b)). exact H.
 Qed.
 
 Theorem minus_lt : forall (a b : nat),
@@ -193,15 +227,17 @@ Theorem nat_order_decideable : forall (a b : nat),
 Proof.
   intros a b; generalize dependent a.
   induction b; simpl; intros.
-  - destruct a.
-    + right. left. reflexivity.
-    + right. right. unfold gt. apply lt_0_n.
+  - destruct a; right.
+    + left. reflexivity.
+    + right. unfold gt. apply lt_0_n.
   - destruct (IHb a).
-    + left. unfold lt. apply le_n_S. apply lt_le_incl. exact H.
+    + left. apply lt_lt_succ_r. exact H.
     + destruct H.
-      * left. unfold lt. give_up.
-      * give_up.
-Admitted.
+      * left. subst b. apply lt_succ_diag_r.
+      * right. apply gt_ge_succ_r in H as [H | H].
+        -- left. symmetry. exact H.
+        -- right. exact H.
+Qed.
 
 Lemma case_split_3way P : forall a b,
   (a < b -> P a b) -> (a = b -> P a b) -> (a > b -> P a b) -> P a b.
