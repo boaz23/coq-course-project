@@ -1,0 +1,38 @@
+euclid_terminates -> find_euclid_n,
+find_euclid_n -> find_euclid_n_lt, find_euclid_n_eq, find_euclid_n_gt,
+find_euclid_n_gt -> max_symm, find_euclid_n_lt, euclid_symm_aux,
+find_euclid_n_eq ->
+find_euclid_n_lt -> lt_max_lt_S_r, lt_n_S, nat_S_of_minus_S,
+nat_S_of_minus_S -> nat_minus_1, minus_n_O, lt_S_n,
+nat_minus_1 -> minus_n_O,
+lt_max_lt_S_r -> max_le_r, max_lt_n, minus_lt_S, lt_le_incl,
+max_lt_n -> max_either,
+max_either -> max_le_r, lt_le_incl, max_le_l, eq_le_incl,
+max_le_l -> max_symm, max_le_r,
+max_le_r -> nat_le_0, le_S_n,
+max_symm ->
+euclid_symm_aux -> 
+case_split_3way' -> nat_order_decideable,
+nat_order_decideable -> lt_0_n, lt_lt_succ_r, lt_succ_diag_r, gt_ge_succ_r,
+euclid_gcd -> nat_minus_split, plus_comm,
+nat_minus_split -> nat_le_0, plus_n_O, add_succ_r, le_S_n,
+minus_lt_S -> minus_lt, le_n_S, le_0_n,
+minus_lt -> le_S_n, minus_n_O, lt_0_n,
+gt_ge_succ_r -> le_eq_or_S_le,
+le_eq_or_S_le -> nat_le_0, le_n_S,
+lt_succ_diag_r -> le_n_S, le_n,
+eq_le_incl -> le_n,
+gt_ge_incl -> lt_le_incl,
+lt_0_n -> le_n_S, le_0_n,
+lt_lt_succ_r -> le_n_S, lt_le_incl,
+lt_S_n -> le_S_n,
+lt_n_S -> le_n_S,
+lt_le_incl -> le_0_n, le_S_n,
+le_S_n -> nat_le_0,
+le_n_S ->
+le_0_n ->
+nat_le_0 ->
+minus_n_O ->
+plus_comm -> plus_n_O, add_succ_r,
+add_succ_r -> plus_n_O,
+plus_n_O ->

@@ -15,7 +15,7 @@ Inductive gcd : nat -> nat -> nat -> Prop :=
 .
 
 Theorem plus_n_O : forall (n : nat),
-  n = n + 0.
+  n + 0 = n.
 Proof.
   intros. induction n; simpl.
   - reflexivity.
@@ -33,9 +33,9 @@ Qed.
 Theorem plus_comm :
   forall (n m : nat), n + m = m + n.
 Proof.
-  intros n. induction n; intros; simpl.
+  intros n. induction n; intros; simpl; symmetry.
   - apply plus_n_O.
-  - symmetry. rewrite -> IHn. apply add_succ_r.
+  - rewrite -> IHn. apply add_succ_r.
 Qed.
 
 Theorem minus_n_O : forall (n : nat),
@@ -119,15 +119,6 @@ Proof.
   intros. unfold lt. apply le_n_S. apply le_0_n.
 Qed.
 
-Theorem gt_ge_incl : forall (a b : nat),
-  a > b -> a >= b.
-Proof.
-  intros a. destruct a; intros.
-  - inversion H.
-  - unfold ge in *. unfold gt in *.
-    apply lt_le_incl. exact H.
-Qed.
-
 Theorem eq_le_incl : forall (a b : nat),
   a = b -> a <= b.
 Proof.
@@ -186,13 +177,13 @@ Proof.
 Qed.
 
 Theorem nat_minus_split : forall (a b : nat),
-  a >= b -> a = (a - b) + b.
+  b <= a -> a = (a - b) + b.
 Proof.
   intros a. induction a as [| a' IHa']; intros.
   - unfold ge in H. rewrite -> (nat_le_0 b H).
     reflexivity.
   - destruct b as [| b'].
-    + simpl. rewrite <- plus_n_O. reflexivity.
+    + simpl. rewrite -> plus_n_O. reflexivity.
     + simpl. rewrite -> add_succ_r. f_equal.
       apply le_S_n in H. apply IHa'.
       unfold ge. exact H.
@@ -208,10 +199,10 @@ Proof.
   - constructor.
   - rewrite -> (nat_minus_split a b).
     + apply step_a'. exact IH.
-    + apply gt_ge_incl. exact H_a_gt_b.
+    + unfold gt in H_a_gt_b. apply lt_le_incl. exact H_a_gt_b.
   - rewrite -> (nat_minus_split b a).
     + rewrite plus_comm. apply step_b'. exact IH.
-    + apply gt_ge_incl. unfold gt. exact H_a_lt_b.
+    + apply lt_le_incl. exact H_a_lt_b.
 Qed.
 
 Lemma noehter_max P :
@@ -234,9 +225,8 @@ Proof.
     + left. apply lt_lt_succ_r. exact H.
     + destruct H.
       * left. subst b. apply lt_succ_diag_r.
-      * right. apply gt_ge_succ_r in H as [H | H].
-        -- left. symmetry. exact H.
-        -- right. exact H.
+      * right. apply gt_ge_succ_r in H as [H | H];
+        [left; symmetry | right]; exact H.
 Qed.
 
 (*
@@ -297,14 +287,6 @@ Proof.
   try exact IHH_euclid.
 Qed.
 
-Theorem euclid_symm : forall (a b z : nat),
-  euclid a b z <-> euclid b a z.
-Proof.
-  intros. split.
-  - apply (euclid_symm_aux a b).
-  - apply (euclid_symm_aux b a).
-Qed.
-
 Theorem max_symm : forall (a b : nat),
   max a b = max b a.
 Proof.
@@ -359,14 +341,6 @@ Proof.
   rewrite -> (max_le_r a b).
   - apply max_lt_n. split; [| apply minus_lt_S]; exact H.
   - apply lt_le_incl. exact H.
-Qed.
-
-Theorem lt_max_lt_S_l : forall (a b : nat),
-  a > b -> max (a - S b) b < max a b.
-Proof.
-  intros a b H. unfold gt in H.
-  rewrite (max_symm (a - S b) b). rewrite (max_symm a b).
-  apply (lt_max_lt_S_r b a). exact H.
 Qed.
 
 Theorem nat_minus_1 : forall (b : nat),
