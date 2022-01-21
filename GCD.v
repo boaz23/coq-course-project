@@ -313,10 +313,10 @@ Theorem max_either : forall (a b : nat),
   max_either_prop a b.
 Proof.
   intros. apply (case_split_3way max_either_prop); unfold max_either_prop;
-  intros H.
-  - right. apply max_le_r. apply lt_le_incl. exact H.
-  - symmetry in H. left. apply max_le_l. apply eq_le_incl. exact H.
-  - left. apply max_le_l. unfold gt in H. apply lt_le_incl. exact H.
+  intros H; [right | left; symmetry in H | left; unfold gt in H].
+  - apply max_le_r. apply lt_le_incl. exact H.
+  - apply max_le_l. apply eq_le_incl. exact H.
+  - apply max_le_l. apply lt_le_incl. exact H.
 Admitted.
 
 Theorem max_lt_n : forall (a b n : nat),
@@ -325,7 +325,6 @@ Proof.
   intros a b n [H_a H_b].
   destruct (max_either a b) as [H_max | H_max];
   rewrite -> H_max; assumption.
-Qed.
 
 Theorem lt_max_lt_S_r : forall (a b : nat),
   a < b -> max a (b - S a) < max a b.
