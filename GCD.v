@@ -239,6 +239,30 @@ Proof.
         -- right. exact H.
 Qed.
 
+(*
+  See below for a refined proved version.
+
+  The following is a directed acycling graph representation which
+  describes the transitive use of this lemma (case_split_3way) as it is
+  written (exactly) in the project specification.
+  On the left of an arrow is a theorem which is proved
+  and on the right of the arrow is a comma-seperated list of
+  the theorems which were used in order to prove it.
+
+  euclid_terminates -> find_euclid_n
+  find_euclid_n     -> find_euclid_n_gt, find_euclid_n_lt, case_split_3way
+  find_euclid_n_gt  -> find_euclid_n_lt
+  find_euclid_n_lt  -> lt_max_lt_S_r
+  lt_max_lt_S_r     -> max_lt_n
+  max_lt_n          -> max_either
+  max_either        -> case_split_3way
+
+  For example, to prove euclid_terminates, I used find_euclid_n
+  which itself used case_split_3way transitively.
+
+  All of these are marked as Qed at the end
+  (except the case_split_3way ofcourse).
+*)
 Lemma case_split_3way P : forall a b,
   (a < b -> P a b) -> (a = b -> P a b) -> (a > b -> P a b) -> P a b.
 Proof.
@@ -247,6 +271,7 @@ Admitted.
 (*
   Slightly different wording to allow destructing on the deciadablity of the
   natural numbers.
+  This one is proved.
 *)
 Lemma case_split_3way' (P : nat -> nat -> Prop) : forall a b,
   (a < b -> P a b) -> (a = b -> P a b) -> (a > b -> P a b) -> P a b.
@@ -317,7 +342,7 @@ Proof.
   - apply max_le_r. apply lt_le_incl. exact H.
   - apply max_le_l. apply eq_le_incl. exact H.
   - apply max_le_l. apply lt_le_incl. exact H.
-Admitted.
+Qed.
 
 Theorem max_lt_n : forall (a b n : nat),
   a < n /\ b < n -> max a b < n.
@@ -325,6 +350,7 @@ Proof.
   intros a b n [H_a H_b].
   destruct (max_either a b) as [H_max | H_max];
   rewrite -> H_max; assumption.
+Qed.
 
 Theorem lt_max_lt_S_r : forall (a b : nat),
   a < b -> max a (b - S a) < max a b.
@@ -420,4 +446,4 @@ Proof.
   - destruct b.
     + inversion H_b.
     + apply (noehter_max P). apply find_euclid_n.
-Admitted.
+Qed.
