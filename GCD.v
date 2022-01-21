@@ -109,8 +109,8 @@ Qed.
 Theorem lt_lt_succ_r : forall (a b : nat),
   a < b -> a < S b.
 Proof.
-  intros a b H_lt.
-  unfold lt. apply le_n_S. apply lt_le_incl. exact H_lt.
+  intros a b H.
+  unfold lt. apply le_n_S. apply lt_le_incl. exact H.
 Qed.
 
 Theorem lt_0_n : forall (n : nat),
@@ -322,7 +322,7 @@ Admitted.
 Theorem max_lt_n : forall (a b n : nat),
   a < n /\ b < n -> max a b < n.
 Proof.
-  intros a b n [H_lt_a H_lt_b].
+  intros a b n [H_a H_b].
   destruct (max_either a b) as [H_max | H_max];
   rewrite -> H_max; assumption.
 Qed.
@@ -330,52 +330,50 @@ Qed.
 Theorem lt_max_lt_S_r : forall (a b : nat),
   a < b -> max a (b - S a) < max a b.
 Proof.
-  intros a b H_lt.
+  intros a b H.
   rewrite -> (max_le_r a b).
-  - apply max_lt_n. split.
-    + exact H_lt.
-    + apply minus_lt_S. exact H_lt.
-  - apply lt_le_incl. exact H_lt.
+  - apply max_lt_n. split; [| apply minus_lt_S]; exact H.
+  - apply lt_le_incl. exact H.
 Qed.
 
 Theorem lt_max_lt_S_l : forall (a b : nat),
   a > b -> max (a - S b) b < max a b.
 Proof.
-  intros a b H_gt. unfold gt in H_gt.
+  intros a b H. unfold gt in H.
   rewrite (max_symm (a - S b) b). rewrite (max_symm a b).
-  apply (lt_max_lt_S_r b a). exact H_gt.
+  apply (lt_max_lt_S_r b a). exact H.
 Qed.
 
 Theorem nat_minus_1 : forall (b : nat),
   b > 0 -> S (b - 1) = b.
 Proof.
-  intros b H_gt. destruct b.
-  - inversion H_gt.
-  - clear H_gt. simpl. rewrite -> minus_n_O. reflexivity.
+  intros b H. destruct b.
+  - inversion H.
+  - clear H. simpl. rewrite -> minus_n_O. reflexivity.
 Qed.
 
 Theorem nat_S_of_minus_S : forall (a b : nat),
   a < b -> S (b - S a) = b - a.
 Proof.
-  intros a b H_lt; generalize dependent b.
+  intros a b H; generalize dependent b.
   induction a; intros.
   - rewrite -> nat_minus_1.
     + rewrite -> minus_n_O. reflexivity.
-    + unfold gt. exact H_lt.
+    + unfold gt. exact H.
   - destruct b.
-    + inversion H_lt.
-    + simpl. apply IHa. apply lt_S_n. exact H_lt.
+    + inversion H.
+    + simpl. apply IHa. apply lt_S_n. exact H.
 Qed.
 
 Theorem find_euclid_n_lt : forall (a b : nat),
   a < b -> noether_max_h euclid_terminates_prop_S a b.
 Proof.
   unfold noether_max_h. unfold euclid_terminates_prop_S.
-  intros a b H_lt H_noether_max.
+  intros a b H_order H_noether_max.
   destruct (H_noether_max a (b - S a)) as [x H_euclid].
-  - apply lt_max_lt_S_r. exact H_lt.
+  - apply lt_max_lt_S_r. exact H_order.
   - exists x. apply step_b.
-    + apply lt_n_S. exact H_lt.
+    + apply lt_n_S. exact H_order.
     + simpl. rewrite -> nat_S_of_minus_S in H_euclid; assumption.
 Qed.
 
@@ -383,15 +381,15 @@ Theorem find_euclid_n_eq : forall (a b : nat),
   a = b -> noether_max_h euclid_terminates_prop_S a b.
 Proof.
   unfold noether_max_h. unfold euclid_terminates_prop_S.
-  intros a b H_eq H_noether_max.
-  symmetry in H_eq. subst b.
+  intros a b H_order H_noether_max.
+  symmetry in H_order. subst b.
   exists (S a). apply stop.
 Qed.
 
 Theorem find_euclid_n_gt : forall (a b : nat),
   a > b -> noether_max_h euclid_terminates_prop_S a b.
 Proof.
-  intros a b H_gt H_noether_max.
+  intros a b H_order H_noether_max.
   rewrite -> max_symm in H_noether_max.
   pose (H_z := find_euclid_n_lt b a).
   destruct H_z; auto. unfold euclid_terminates_prop_S.
