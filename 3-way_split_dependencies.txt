@@ -1,0 +1,7 @@
+euclid_terminates -> find_euclid_n
+find_euclid_n     -> find_euclid_n_gt, find_euclid_n_lt, case_split_3way
+find_euclid_n_gt  -> find_euclid_n_lt
+find_euclid_n_lt  -> lt_max_lt_S_r
+lt_max_lt_S_r     -> max_lt_n
+max_lt_n          -> max_either
+max_either        -> case_split_3way

@@ -250,10 +250,9 @@ Qed.
   For example, to prove euclid_terminates, I used find_euclid_n
   which itself uses case_split_3way transitively.
 
-  All of these are marked as Qed at the end
-  (except the case_split_3way ofcourse).
-
-  See the lemma below it to see a refined proved version.
+  All of these are marked as Admitted at the end
+  and the rest are marked as Qed.
+  See the lemma below it for a refined proved version.
 *)
 Lemma case_split_3way P : forall a b,
   (a < b -> P a b) -> (a = b -> P a b) -> (a > b -> P a b) -> P a b.
@@ -326,7 +325,7 @@ Proof.
   - apply max_le_r. apply lt_le_incl. exact H.
   - apply max_le_l. apply eq_le_incl. exact H.
   - apply max_le_l. apply lt_le_incl. exact H.
-Qed.
+Admitted.
 
 Theorem max_lt_n : forall (a b n : nat),
   a < n /\ b < n -> max a b < n.
@@ -334,7 +333,7 @@ Proof.
   intros a b n [H_a H_b].
   destruct (max_either a b) as [H_max | H_max];
   rewrite -> H_max; assumption.
-Qed.
+Admitted.
 
 Theorem lt_max_lt_S_r : forall (a b : nat),
   a < b -> max a (b - S a) < max a b.
@@ -343,7 +342,7 @@ Proof.
   rewrite -> (max_le_r a b).
   - apply max_lt_n. split; [| apply minus_lt_S]; exact H.
   - apply lt_le_incl. exact H.
-Qed.
+Admitted.
 
 Theorem nat_minus_1 : forall (b : nat),
   b > 0 -> S (b - 1) = b.
@@ -376,7 +375,7 @@ Proof.
   - exists x. apply step_b.
     + apply lt_n_S. exact H_order.
     + simpl. rewrite -> nat_S_of_minus_S in H_euclid; assumption.
-Qed.
+Admitted.
 
 Theorem find_euclid_n_eq : forall (a b : nat),
   a = b -> noether_max_h euclid_terminates_prop_S a b.
@@ -395,7 +394,7 @@ Proof.
   pose (H_z := find_euclid_n_lt b a).
   destruct H_z; auto. unfold euclid_terminates_prop_S.
   exists x. apply (euclid_symm_aux (S b) (S a) x). exact H.
-Qed.
+Admitted.
 
 Theorem find_euclid_n : forall (a b : nat),
   noether_max_h euclid_terminates_prop_S a b.
@@ -410,7 +409,7 @@ Proof.
     | apply find_euclid_n_eq
     | apply find_euclid_n_gt
   ]; auto.
-Qed.
+Admitted.
 
 Theorem euclid_terminates : forall a b,
   a > 0 -> b > 0 -> exists z, euclid a b z.
@@ -422,4 +421,4 @@ Proof.
   - destruct b.
     + inversion H_b.
     + apply (noehter_max P). apply find_euclid_n.
-Qed.
+Admitted.
