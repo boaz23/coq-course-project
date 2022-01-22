@@ -63,33 +63,38 @@ Qed.
 Theorem le_n_S : forall (a b : nat),
   a <= b -> S a <= S b.
 Proof.
-  intros. induction H.
+  intros. induction H as [| b H IHle].
   - apply le_n.
   - apply le_S. exact IHle.
 Qed.
+
+Tactic Notation "le_inversion" constr(H) "H1" "a'" "H_S" :=
+  inversion H as [H1 | a' H1 H_S]; clear H; rename H1 into H; subst
+.
 
 Theorem le_S_n : forall (a b : nat),
   S a <= S b -> a <= b.
 Proof.
   intros a b; generalize dependent a.
-  induction b as [| b' IHb']; intros; inversion H; subst.
+  induction b as [| b' IHb']; intros; le_inversion H H1 a' H_S.
   (* b = 0 *)
-  - apply le_n.
-  - apply nat_le_0 in H1. discriminate H1.
+  - (* a = b *)
+    apply le_n.
+  - (* a = S a *)
+    inversion H.
   (* b = S b' *)
-  - apply le_n.
-  - apply le_S. apply IHb'. exact H1.
+  - (* a = b *)
+    apply le_n.
+  - (* a = S a *)
+    apply le_S. apply IHb'. exact H.
 Qed.
 
 Theorem lt_le_incl : forall (a b : nat),
   a < b -> a <= b.
 Proof.
-  intros a. destruct a; intros.
-  - apply le_0_n.
-  - unfold lt in *. destruct b.
-    + inversion H.
-    + apply le_S_n in H.
-      apply le_S. exact H.
+  intros. unfold lt in *. destruct b.
+  - inversion H.
+  - apply le_S. apply le_S_n. exact H.
 Qed.
 
 Theorem lt_n_S : forall (a b : nat),
@@ -135,14 +140,9 @@ Qed.
 Theorem le_eq_or_S_le : forall (a b : nat),
   b <= a -> b = a \/ S b <= a.
 Proof.
-  intros a b H.
-  destruct a.
-  - rewrite -> (nat_le_0 b).
-    + left. reflexivity.
-    + exact H.
-  - inversion H as [H1 | A H1 B]; clear H; rename H1 into H; subst.
-    + left. reflexivity.
-    + right. apply le_n_S. exact H.
+  intros a b H. le_inversion H H1 a' H_S.
+  - left. reflexivity.
+  - right. apply le_n_S. exact H.
 Qed.
 
 Theorem gt_ge_succ_r : forall (a b : nat),
@@ -156,16 +156,12 @@ Theorem minus_lt : forall (a b : nat),
   b <= a -> 0 < b -> a - b < a.
 Proof.
   intros a b H_le H_b; generalize dependent a. unfold lt.
-  induction b; intros.
-  - inversion H_b.
-  - destruct a.
-    + inversion H_le.
-    + simpl. apply le_S_n in H_le. clear H_b.
-      destruct b.
-      * rewrite -> minus_n_O. apply le_n.
-      * apply le_S. apply IHb.
-        -- apply lt_0_n.
-        -- exact H_le.
+  induction b; intros; [inversion H_b |].
+  destruct a; simpl; clear H_b; [inversion H_le | destruct b].
+  - rewrite -> minus_n_O. apply le_n.
+  - apply le_S. apply IHb.
+    + apply lt_0_n.
+    + apply le_S_n. exact H_le.
 Qed.
 
 Theorem minus_lt_S : forall (a b : nat),
@@ -179,14 +175,14 @@ Qed.
 Theorem nat_minus_split : forall (a b : nat),
   b <= a -> a = (a - b) + b.
 Proof.
-  intros a. induction a as [| a' IHa']; intros.
-  - unfold ge in H. rewrite -> (nat_le_0 b H).
-    reflexivity.
-  - destruct b as [| b'].
-    + simpl. rewrite -> plus_n_O. reflexivity.
-    + simpl. rewrite -> add_succ_r. f_equal.
-      apply le_S_n in H. apply IHa'.
-      unfold ge. exact H.
+  intros a. induction a; intros.
+  - rewrite -> (nat_le_0 b).
+    + reflexivity.
+    + exact H.
+  - destruct b; simpl.
+    + rewrite -> plus_n_O. reflexivity.
+    + rewrite -> add_succ_r. f_equal.
+      apply IHa. apply le_S_n. exact H.
 Qed.
 
 Theorem euclid_gcd : forall a b z, euclid a b z -> gcd a b z.
@@ -221,12 +217,11 @@ Proof.
   - destruct a; right.
     + left. reflexivity.
     + right. unfold gt. apply lt_0_n.
-  - destruct (IHb a).
-    + left. apply lt_lt_succ_r. exact H.
-    + destruct H.
-      * left. subst b. apply lt_succ_diag_r.
-      * right. apply gt_ge_succ_r in H as [H | H];
-        [left; symmetry | right]; exact H.
+  - destruct (IHb a); clear IHb; [| destruct H]; [left | left | right].
+    + apply lt_lt_succ_r. exact H.
+    + subst b. apply lt_succ_diag_r.
+    + apply gt_ge_succ_r in H as [H | H];
+      [left; symmetry | right]; exact H.
 Qed.
 
 (*
@@ -303,7 +298,9 @@ Theorem max_le_r : forall (a b : nat),
 Proof.
   intros a b; generalize dependent a.
   induction b; intros; simpl.
-  - rewrite -> (nat_le_0 a H). reflexivity.
+  - rewrite -> (nat_le_0 a).
+    + reflexivity.
+    + exact H.
   - destruct a; simpl.
     + reflexivity.
     + f_equal. apply IHb. apply le_S_n. exact H.
@@ -374,15 +371,14 @@ Proof.
   - apply lt_max_lt_S_r. exact H_order.
   - exists x. apply step_b.
     + apply lt_n_S. exact H_order.
-    + simpl. rewrite -> nat_S_of_minus_S in H_euclid; assumption.
+    + simpl. rewrite <- nat_S_of_minus_S; assumption.
 Admitted.
 
 Theorem find_euclid_n_eq : forall (a b : nat),
   a = b -> noether_max_h euclid_terminates_prop_S a b.
 Proof.
   unfold noether_max_h. unfold euclid_terminates_prop_S.
-  intros a b H_order H_noether_max.
-  symmetry in H_order. subst b.
+  intros a b H_order H_noether_max. subst b.
   exists (S a). apply stop.
 Qed.
 
@@ -415,10 +411,7 @@ Theorem euclid_terminates : forall a b,
   a > 0 -> b > 0 -> exists z, euclid a b z.
 Proof.
   intros a b H_a H_b.
-  pose (P := euclid_terminates_prop_S).
-  destruct a.
-  - inversion H_a.
-  - destruct b.
-    + inversion H_b.
-    + apply (noehter_max P). apply find_euclid_n.
+  destruct a; [inversion H_a |]; destruct b; [inversion H_b |];
+  clear H_a H_b; pose (P := euclid_terminates_prop_S).
+  apply (noehter_max P). apply find_euclid_n.
 Admitted.
