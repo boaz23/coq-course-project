@@ -225,7 +225,23 @@ Proof.
 Qed.
 
 (*
-  See below for a refined proved version.
+  Slightly different wording to allow destructing on the deciadablity of the
+  natural numbers.
+  This one is proved.
+  See below for the original.
+*)
+Lemma case_split_3way' (P : nat -> nat -> Prop) : forall a b,
+  (a < b -> P a b) -> (a = b -> P a b) -> (a > b -> P a b) -> P a b.
+Proof.
+  intros a b H_P_lt H_P_eq H_P_gt.
+  destruct (nat_order_decideable a b) as [H | [H | H]];
+  [apply H_P_lt | apply H_P_eq | apply H_P_gt]; exact H.
+Qed.
+
+(*
+  See above for a refined proved version.
+  I had trouble splitting to cases on this one because it
+  maps to any Type rather than a Prop.
 
   The following is a directed acycling graph representation which
   describes the transitive use of this lemma (case_split_3way) as it is
@@ -247,25 +263,12 @@ Qed.
 
   All of these are marked as Admitted at the end
   and the rest are marked as Qed.
-  See the lemma below it for a refined proved version.
+  See the lemma above it for a refined proved version.
 *)
 Lemma case_split_3way P : forall a b,
   (a < b -> P a b) -> (a = b -> P a b) -> (a > b -> P a b) -> P a b.
 Proof.
 Admitted.
-
-(*
-  Slightly different wording to allow destructing on the deciadablity of the
-  natural numbers.
-  This one is proved.
-*)
-Lemma case_split_3way' (P : nat -> nat -> Prop) : forall a b,
-  (a < b -> P a b) -> (a = b -> P a b) -> (a > b -> P a b) -> P a b.
-Proof.
-  intros a b H_P_lt H_P_eq H_P_gt.
-  destruct (nat_order_decideable a b) as [H | [H | H]];
-  [apply H_P_lt | apply H_P_eq | apply H_P_gt]; exact H.
-Qed.
 
 Definition euclid_terminates_prop_S (a b : nat) :=
   exists z, euclid (S a) (S b) z.
