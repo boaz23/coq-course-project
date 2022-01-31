@@ -96,36 +96,59 @@ Proof.
 Qed.
 *)
 
+Definition R_reflexive {X : Type} (R : X -> X -> Prop) :=
+  forall (x : X), R x x.
+Definition R_anti_symmetric {X : Type} (R : X -> X -> Prop) :=
+  forall (x y : X), R x y -> R y x -> x = y.
+Definition R_transitive {X : Type} (R : X -> X -> Prop) :=
+  forall (x y z : X), R x y -> R y z -> R x z.
+Definition R_partial_order {X : Type} (R : X -> X -> Prop) :=
+  R_reflexive R /\ R_anti_symmetric R /\ R_transitive R.
+
 (*
-I used nat because I did not want to get into defining a partial order relation
-on any type.
+  This part of the project isn't about naturals,
+  so I just used Coq's library theorems for this one.
 *)
-Fixpoint search_tree (t : tree nat) : Prop :=
+Theorem nat_le_partial_order : R_partial_order le.
+Proof.
+  unfold R_partial_order;
+  unfold R_reflexive; unfold R_anti_symmetric; unfold R_transitive.
+  split; [| split].
+  - apply Nat.le_refl.
+  - apply Nat.le_antisymm.
+  - apply Nat.le_trans.
+Qed.
+
+Fixpoint search_tree {X : Type}
+ (R : X -> X -> Prop) (H_po : R_partial_order R)
+ (t : tree X) : Prop :=
   match t with
   | empty => True
   | node l x r => (
-    let search_tree_l := search_tree l in
+    let search_tree_l := search_tree R H_po l in
     let l_less_than := match l with
       | empty => True
-      | node ll lx lr => lx <= x
+      | node ll lx lr => R lx x
     end in
-    let search_tree_r := search_tree r in
+    let search_tree_r := search_tree R H_po r in
     let less_than_r := match r with
       | empty => True
-      | node rl rx rr => x <= rx
+      | node rl rx rr => R x rx
     end in
     search_tree_l /\ l_less_than /\ search_tree_r /\ less_than_r
   )
   end
 .
 
-Theorem leaf_search_tree : forall (x : nat),
-  search_tree (leaf x).
+Theorem leaf_search_tree : forall {X : Type}
+  (R : X -> X -> Prop) (H_po : R_partial_order R) (x : X),
+  search_tree R H_po (leaf x).
 Proof.
   intros; unfold leaf. simpl. auto.
 Qed.
 
-Example search_tree_ex_1 : search_tree (
+(*
+Example search_tree_ex_1 : search_tree le (
   node
     (node (node (leaf 2) 4 (leaf 5)) 4 (leaf 6))
     7
@@ -141,10 +164,13 @@ Proof.
   - apply le_S. apply le_S. apply le_S. apply le_n.
   - apply le_n.
 Qed.
+*)
+
+Definition search_tree_nat := search_tree le nat_le_partial_order.
 
 Definition search_tree_neg_1 := node (leaf 5) 8 (leaf 6).
 
-Example search_tree_ex_neg_1 : ~search_tree search_tree_neg_1.
+Example search_tree_ex_neg_1 : ~search_tree_nat search_tree_neg_1.
 Proof.
   unfold not. simpl. intros.
   destruct H as [_ [_ [_ H_le]]].
@@ -152,6 +178,29 @@ Proof.
     inversion H_le as [n | n H_le' H_n_eq]; subst;
     clear H_le; rename H_le' into H_le
   ).
+Qed.
+
+Definition f_const {X Y : Type} (x : X) :=
+  fun (y : Y) => x.
+
+Theorem R_reflex_f_const : forall {X : Type} (R : X -> X -> Prop) (x : X),
+  R_reflexive R -> forall (x1 x2 : X), R (f_const x x1) (f_const x x2).
+Proof.
+  intros X R x H_R_reflexive x1 x2.
+  unfold f_const; simpl. apply H_R_reflexive.
+Qed.
+
+Theorem search_tree_const : forall {X : Type}
+  (x : X) (R : X -> X -> Prop) (H_po : R_partial_order R) (t : tree X),
+  search_tree R H_po (tree_map (f_const x) t).
+Proof.
+  intros. induction t as [| l IHl tx r IHr]; simpl.
+  - apply I.
+  - repeat split; auto.
+    destruct l as [| ll lx lr]; simpl; auto.
+    + apply R_reflex_f_const. apply H_po.
+    + destruct r as [| rl rx rr]; simpl; auto.
+      apply R_reflex_f_const. apply H_po.
 Qed.
 
 Theorem dist_exists_not_all : forall {X : Type} (P : X -> Prop),
@@ -169,32 +218,29 @@ Proof.
   apply H_not_Q. apply H_P_imp_Q. apply H_P.
 Qed.
 
-Definition f_const {X Y : Type} (x : X) :=
-  fun (y : Y) => x.
-
-Theorem search_tree_const : forall (x : nat) (t : tree nat),
-  search_tree (tree_map (f_const x) t).
-Proof.
-  intros. induction t as [| l IHl tx r IHr].
-  - simpl. apply I.
-  - destruct l as [| ll lx lr]; destruct r as [| rl rx rr]; simpl; auto.
-Qed.
-
 Theorem tree_map_search_tree_counter_ex :
   exists (f : nat -> nat) (t : tree nat),
-  search_tree (tree_map f t) /\ ~(search_tree t).
+  search_tree_nat (tree_map f t) /\ ~(search_tree_nat t).
 Proof.
   exists (f_const 0). exists search_tree_neg_1. split.
   - apply search_tree_const.
   - exact search_tree_ex_neg_1.
 Qed.
 
+(*
+  The false specification
+*)
 Theorem tree_map_search_tree_not_implies_search_tree :
-  ~(forall (f : nat -> nat) (t : tree nat),
-    search_tree (tree_map f t) -> search_tree t).
+  ~(forall
+      {X : Type} (R : X -> X -> Prop) (H_po : R_partial_order R)
+      (f : X -> X) (t : tree X),
+    search_tree R H_po (tree_map f t) -> search_tree R H_po t).
 Proof.
   pose (H_counter_ex := tree_map_search_tree_counter_ex).
   destruct H_counter_ex as [f [t H_counter]].
+  apply dist_exists_not_all. exists nat.
+  apply dist_exists_not_all. exists le.
+  apply dist_exists_not_all. exists nat_le_partial_order.
   apply dist_exists_not_all. exists f.
   apply dist_exists_not_all. exists t.
   apply not_imp_imp_and. exact H_counter.
