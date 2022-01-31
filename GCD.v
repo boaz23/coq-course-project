@@ -209,14 +209,16 @@ Admitted.
 Definition noether_max_h P a b :=
   (forall a' b', max a' b' < max a b -> P a' b') -> P a b.
 
+Definition nat_order_prop (a b : nat) := a < b \/ a = b \/ a > b.
+
 Theorem nat_order_decideable : forall (a b : nat),
-  a < b \/ a = b \/ a > b.
+  nat_order_prop a b.
 Proof.
-  intros a b; generalize dependent a.
+  intros a b; generalize dependent a; unfold nat_order_prop.
   induction b; simpl; intros.
-  - destruct a; right.
-    + left. reflexivity.
-    + right. unfold gt. apply lt_0_n.
+  - destruct a; right; [left | right].
+    + reflexivity.
+    + unfold gt. apply lt_0_n.
   - destruct (IHb a); clear IHb; [| destruct H]; [left | left | right].
     + apply lt_lt_succ_r. exact H.
     + subst b. apply lt_succ_diag_r.
