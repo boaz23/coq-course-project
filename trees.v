@@ -96,17 +96,21 @@ Proof.
 Qed.
 *)
 
-Fixpoint search_tree_rec (t : tree nat) : Prop :=
+(*
+I used nat because I did not want to get into defining a partial order relation
+on any type.
+*)
+Fixpoint search_tree (t : tree nat) : Prop :=
   match t with
   | empty => True
   | node l x r => (
-    let search_tree_l := search_tree_rec l in
+    let search_tree_l := search_tree l in
     let l_less_than := match l with
       | empty => True
       | node ll lx lr => lx <= x
     end in
-    let search_tree_r := search_tree_rec r in
-    let less_than_r := match l with
+    let search_tree_r := search_tree r in
+    let less_than_r := match r with
       | empty => True
       | node rl rx rr => x <= rx
     end in
@@ -115,40 +119,10 @@ Fixpoint search_tree_rec (t : tree nat) : Prop :=
   end
 .
 
-Inductive search_tree : tree nat -> Prop :=
-  | SearchTree_Empty : search_tree empty
-  | SearchTree_Node (l : tree nat) (x : nat) (r : tree nat) :
-    search_tree_left x l -> search_tree_right x r -> search_tree (node l x r)
-    (*
-    let p := search_tree (node l x r) in
-    match l, r return p with
-    | empty, empty => p
-    | node ll lx lr, empty => lx <= x -> p
-    | empty, node rl rx rr => x <= rx -> p
-    | node ll lx lr, node rl rx rr => lx <= x -> x <= rx -> p
-    end
-    *)
-
-with search_tree_left : nat -> tree nat -> Prop :=
-  | SearchTree_Left_Empty (x : nat) : search_tree_left x empty
-  | SearchTree_Left_Node (x : nat) (ll : tree nat) (lx : nat) (lr : tree nat) :
-    let l := node ll lx lr in
-    search_tree l -> lx <= x -> search_tree_left x l
-
-with search_tree_right : nat -> tree nat -> Prop :=
-  | SearchTree_Right_Empty (x : nat) : search_tree_right x empty
-  | SearchTree_Right_Node (x : nat) (rl : tree nat) (rx : nat) (rr : tree nat) :
-    let r := node rl rx rr in
-    search_tree r -> x <= rx -> search_tree_right x r
-.
-
 Theorem leaf_search_tree : forall (x : nat),
   search_tree (leaf x).
 Proof.
-  intros; unfold leaf.
-  apply SearchTree_Node.
-  - apply SearchTree_Left_Empty.
-  - apply SearchTree_Right_Empty.
+  intros; unfold leaf. simpl. auto.
 Qed.
 
 Example search_tree_ex_1 : search_tree (
@@ -158,38 +132,23 @@ Example search_tree_ex_1 : search_tree (
     (node empty 7 (leaf 10))
 ).
 Proof.
-  apply SearchTree_Node.
-  - apply SearchTree_Left_Node.
-    + apply SearchTree_Node.
-      * apply SearchTree_Left_Node.
-        -- apply SearchTree_Node.
-          ++ apply SearchTree_Left_Node.
-            ** apply leaf_search_tree.
-            ** apply le_S. apply le_S. apply le_n.
-          ++ apply SearchTree_Right_Node.
-            ** apply leaf_search_tree.
-            ** apply le_S. apply le_n.
-        -- apply le_n.
-      * apply SearchTree_Right_Node.
-        -- apply leaf_search_tree.
-        -- apply le_S. apply le_S. apply le_n.
-    + apply le_S. apply le_S. apply le_S. apply le_n.
-  - apply SearchTree_Right_Node.
-    + apply SearchTree_Node.
-      * apply SearchTree_Left_Empty.
-      * apply SearchTree_Right_Node.
-        -- apply leaf_search_tree.
-        -- apply le_S. apply le_S. apply le_S. apply le_n.
-    + apply le_n.
+  simpl. repeat split.
+  - apply le_S. apply le_S. apply le_n.
+  - apply le_S. apply le_n.
+  - apply le_n.
+  - apply le_S. apply le_S. apply le_n.
+  - apply le_S. apply le_S. apply le_S. apply le_n.
+  - apply le_S. apply le_S. apply le_S. apply le_n.
+  - apply le_n.
 Qed.
 
 Definition search_tree_neg_1 := node (leaf 5) 8 (leaf 6).
 
 Example search_tree_ex_neg_1 : ~search_tree search_tree_neg_1.
 Proof.
-  unfold not; intros.
-  inversion H; subst. inversion H4; subst.
-  rename H7 into H_le. repeat (
+  unfold not. simpl. intros.
+  destruct H as [_ [_ [_ H_le]]].
+  repeat (
     inversion H_le as [n | n H_le' H_n_eq]; subst;
     clear H_le; rename H_le' into H_le
   ).
@@ -216,19 +175,9 @@ Definition f_const {X Y : Type} (x : X) :=
 Theorem search_tree_const : forall (x : nat) (t : tree nat),
   search_tree (tree_map (f_const x) t).
 Proof.
-  intros. induction t as [| l IHl tx r IHr]; simpl.
-  - apply SearchTree_Empty.
-  - apply SearchTree_Node.
-    + destruct l; simpl.
-      * apply SearchTree_Left_Empty.
-      * apply SearchTree_Left_Node.
-        -- apply IHl.
-        -- unfold f_const. apply le_n.
-    + destruct r; simpl.
-      * apply SearchTree_Right_Empty.
-      * apply SearchTree_Right_Node.
-        -- apply IHr.
-        -- unfold f_const. apply le_n.
+  intros. induction t as [| l IHl tx r IHr].
+  - simpl. apply I.
+  - destruct l as [| ll lx lr]; destruct r as [| rl rx rr]; simpl; auto.
 Qed.
 
 Theorem tree_map_search_tree_counter_ex :
