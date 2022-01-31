@@ -244,6 +244,10 @@ Qed.
   See above for a refined proved version.
   I had trouble splitting to cases on this one because it
   maps to any Type rather than a Prop.
+  It gives the following error when attempting to ```destruct```
+  as in the above proof:
+  "Case analysis on sort Type is not allowed for inductive definition or.".
+  I don't know if you intended so or it is just a mistake.
 
   The following is a directed acycling graph representation which
   describes the transitive use of this lemma (case_split_3way) as it is
