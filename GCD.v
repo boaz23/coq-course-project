@@ -152,6 +152,7 @@ Proof.
   apply (le_eq_or_S_le a (S b)). exact H.
 Qed.
 
+(* sub_lt *)
 Theorem minus_lt : forall (a b : nat),
   b <= a -> 0 < b -> a - b < a.
 Proof.
@@ -172,6 +173,7 @@ Proof.
   - unfold lt. apply le_n_S. apply le_0_n.
 Qed.
 
+(* le_plus_minus *)
 Theorem nat_minus_split : forall (a b : nat),
   b <= a -> a = (a - b) + b.
 Proof.
@@ -184,6 +186,8 @@ Proof.
     + rewrite -> add_succ_r. f_equal.
       apply IHa. apply le_S_n. exact H.
 Qed.
+
+(* ********** End of basic Nat properties ********** *)
 
 Theorem euclid_gcd : forall a b z, euclid a b z -> gcd a b z.
 Proof.
@@ -271,9 +275,31 @@ Qed.
   and the rest are marked as Qed.
   See the lemma above it for a refined proved version.
 *)
+
+Definition nat_order_bool_prop (a b : nat) := orb (a <? b) (orb (a =? b) (negb (a <=? b))) = true.
+
+Theorem hello : forall (a b : nat), nat_order_bool_prop a b.
+Proof.
+Admitted.
+
+Theorem hello2 P : forall (a b : nat),
+  nat_order_bool_prop a b ->
+  (a < b -> P a b) -> (a = b -> P a b) -> (a > b -> P a b) -> P a b.
+Proof.
+  intros a b H_nat_order_b H_lt H_eq H_gt.
+  destruct (a <? b) eqn:H_order_b;
+  [| clear H_order_b; destruct (a =? b) eqn:H_order_b;
+  [| clear H_order_b; destruct (negb (a <=? b)) eqn:H_order_b]];
+  try discriminate; clear H_nat_order_b.
+  - give_up.
+  - give_up.
+  - give_up.
+Admitted.
+
 Lemma case_split_3way P : forall a b,
   (a < b -> P a b) -> (a = b -> P a b) -> (a > b -> P a b) -> P a b.
 Proof.
+  intros. apply hello2; auto. apply hello.
 Admitted.
 
 Definition euclid_terminates_prop_S (a b : nat) :=
