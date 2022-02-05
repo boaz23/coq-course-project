@@ -1181,7 +1181,6 @@ Inductive com : Type :=
   | CSeq (c1 c2 : com)
   | CIf (b : bexp) (c1 c2 : com)
   | CWhile (b : bexp) (c : com)
-  | CFor (c_init : com) (b : bexp) (c_update : com) (c_iter : com)
 .
 
 (** As we did for expressions, we can use a few [Notation]
@@ -1204,13 +1203,6 @@ Notation "'if' x 'then' y 'else' z 'end'" :=
 Notation "'while' x 'do' y 'end'" :=
          (CWhile x y)
             (in custom com at level 89, x at level 99, y at level 99) : com_scope.
-Notation "'for' '(' init ';;' b ';;' update ')' 'do' iter 'end'" :=
-         (CFor init b update iter)
-            (in custom com at level 89,
-              init at level 99,
-              b at level 99,
-              update at level 99,
-              iter at level 99) : com_scope.
 
 (** For example, here is the factorial function again, written as a
     formal Coq definition.  When this command terminates, the variable
@@ -1225,33 +1217,6 @@ Definition fact_in_coq : com :=
      end }>.
 
 Print fact_in_coq.
-
-Definition imp_for_loop_notation_test : com :=
-  <{
-    X := 1;
-    while true do skip end;
-    for (W := 0;; W <= 9;; W := W + 1) do
-      X := 2 * X
-    end
-  }>
-.
-
-Definition imp_for_loop_notation_test_2 : com :=
-  <{
-    X := 1;
-    while true do skip end;
-    for (
-      for (W := 1;; true;; Z := Z + 1) do skip end;;
-      W <= 9;;
-      W := W + 1
-    ) do
-      X := 2 * X
-    end
-  }>
-.
-
-Check imp_for_loop_notation_test : com.
-Print imp_for_loop_notation_test.
 
 (* ================================================================= *)
 (** ** Desugaring Notations *)
@@ -1414,8 +1379,6 @@ Fixpoint ceval_fun_no_while (st : state) (c : com) : state :=
           else ceval_fun_no_while st c2
     | <{ while b do c end }> =>
         st  (* bogus *)
-    | <{ for (init;; b;; update) do iter end }> =>
-        st  (* bogus *)
   end.
 
 (** In a more conventional functional programming language like OCaml or
@@ -1545,9 +1508,6 @@ Inductive ceval : com -> state -> state -> Prop :=
       st  =[ c ]=> st' ->
       st' =[ while b do c end ]=> st'' ->
       st  =[ while b do c end ]=> st''
-  | E_For : forall st st' init b upd iter,
-      st =[ init; while b do iter; upd end ]=> st' ->
-      st =[ for (init;; b;; upd) do iter end ]=> st'
 
   where "st =[ c ]=> st'" := (ceval c st st').
 
@@ -1573,40 +1533,6 @@ Proof.
     apply E_IfFalse.
     reflexivity.
     apply E_Asgn. reflexivity.
-Qed.
-
-Example ceval_for_loop_example_1:
-  empty_st =[
-    for (Z:= 1; X := 0;; X <= 1;; X := X + 1) do
-      Z := Z + 3
-    end
-  ]=> (
-    X !-> 2; Z !-> 7;
-    X !-> 1; Z !-> 4;
-    X !-> 0; Z !-> 1
-  ).
-Proof.
-  apply E_For
-    with (st' :=  X !-> 2; Z !-> 7; X !-> 1; Z !-> 4; X !-> 0; Z !-> 1).
-  - apply E_Seq with (st' := X !-> 0; Z !-> 1).
-    + apply E_Seq with (st' := Z !-> 1).
-      * apply E_Asgn. reflexivity.
-      * apply E_Asgn. reflexivity.
-    + apply E_WhileTrue with (st' := X !-> 1; Z !-> 4; X !-> 0; Z !-> 1).
-      * (* beval st b = true *)
-        reflexivity.
-      * apply E_Seq with (st' := Z !-> 4; X !-> 0; Z !-> 1).
-        -- apply E_Asgn. reflexivity.
-        -- apply E_Asgn. reflexivity.
-      * apply E_WhileTrue with
-          (st' := X !-> 2; Z !-> 7; X !-> 1; Z !-> 4; X !-> 0; Z !-> 1).
-        -- (* beval st b = true *)
-          reflexivity.
-        -- apply E_Seq
-            with (st' := Z !-> 7; X !-> 1; Z !-> 4; X !-> 0; Z !-> 1).
-          ++ apply E_Asgn. reflexivity.
-          ++ apply E_Asgn. reflexivity.
-        -- apply E_WhileFalse. reflexivity.
 Qed.
 
 (** **** Exercise: 2 stars, standard, optional (ceval_example2) *)
@@ -1686,8 +1612,6 @@ Proof.
   - (* E_WhileTrue, b evaluates to true *)
     rewrite (IHE1_1 st'0 H3) in *.
     apply IHE1_2. assumption.
-  - (* E_For *)
-    apply IHE1. apply H5.
 Qed.
 
 (* ################################################################# *)
@@ -1742,12 +1666,6 @@ Proof.
   induction contra; try discriminate; auto.
   - inversion Heqloopdef; subst; clear Heqloopdef.
     simpl in H. discriminate H.
-
-  (** Proceed by induction on the assumed derivation showing that
-      [loopdef] terminates.  Most of the cases are immediately
-      contradictory and so can be solved in one step with
-      [discriminate]. *)
-
 Qed.
 (** [] *)
 
@@ -1766,8 +1684,6 @@ Fixpoint no_whiles (c : com) : bool :=
   | <{ if _ then ct else cf end }> =>
       andb (no_whiles ct) (no_whiles cf)
   | <{ while _ do _ end }>  =>
-      false
-  | <{ for (_;; _;; _) do _ end }> =>
       false
   end.
 
@@ -2107,7 +2023,6 @@ Inductive com : Type :=
   | CSeq (c1 c2 : com)
   | CIf (b : bexp) (c1 c2 : com)
   | CWhile (b : bexp) (c : com)
-  | CFor (c_init : com) (b : bexp) (c_update : com) (c_iter : com)
 .
 
 Notation "'break'" := CBreak (in custom com at level 0).
@@ -2127,13 +2042,6 @@ Notation "'if' x 'then' y 'else' z 'end'" :=
 Notation "'while' x 'do' y 'end'" :=
          (CWhile x y)
             (in custom com at level 89, x at level 99, y at level 99) : com_scope.
-Notation "'for' '(' init ';;' b ';;' update ')' 'do' iter 'end'" :=
-         (CFor init b update iter)
-            (in custom com at level 89,
-              init at level 99,
-              b at level 99,
-              update at level 99,
-              iter at level 99) : com_scope.
 
 (** Next, we need to define the behavior of [break].  Informally,
     whenever [break] is executed in a sequence of commands, it stops
@@ -2253,9 +2161,6 @@ Inductive ceval : com -> state -> result -> state -> Prop :=
       beval st b = true ->
       st =[ c ]=> st' / SBreak ->
       st =[ while b do c end ]=> st' / SContinue
-  | E_For : forall st s st' init b upd iter,
-      st =[ init; while b do iter; upd end ]=> st' / s ->
-      st =[ for (init;; b;; upd) do iter end ]=> st' / SContinue
 
   where "st '=[' c ']=>' st' '/' s" := (ceval c st s st').
 
@@ -2377,7 +2282,6 @@ Ltac find_eqn_2params_and_eq :=
   end
 .
 
-
 Theorem ceval_deterministic: forall (c:com) st st1 st2 s1 s2,
      st =[ c ]=> st1 / s1 ->
      st =[ c ]=> st2 / s2 ->
@@ -2409,8 +2313,612 @@ End BreakImp.
     about making up a concrete Notation for [for] loops, but feel free
     to play with this too if you like.) *)
 
-(* FILL IN HERE
+Module ForLoopImp.
 
-    [] *)
+Inductive com : Type :=
+  | CSkip
+  | CAsgn (x : string) (a : aexp)
+  | CSeq (c1 c2 : com)
+  | CIf (b : bexp) (c1 c2 : com)
+  | CWhile (b : bexp) (c : com)
+  | CFor (c_init : com) (b : bexp) (c_update : com) (c_iter : com)
+.
+
+(** As we did for expressions, we can use a few [Notation]
+    declarations to make reading and writing Imp programs more
+    convenient. *)
+
+Notation "'skip'"  :=
+         CSkip (in custom com at level 0) : com_scope.
+Notation "x := y"  :=
+         (CAsgn x y)
+            (in custom com at level 0, x constr at level 0,
+             y at level 85, no associativity) : com_scope.
+Notation "x ; y" :=
+         (CSeq x y)
+           (in custom com at level 90, right associativity) : com_scope.
+Notation "'if' x 'then' y 'else' z 'end'" :=
+         (CIf x y z)
+           (in custom com at level 89, x at level 99,
+            y at level 99, z at level 99) : com_scope.
+Notation "'while' x 'do' y 'end'" :=
+         (CWhile x y)
+            (in custom com at level 89, x at level 99, y at level 99) : com_scope.
+Notation "'for' '(' init ';;' b ';;' update ')' 'do' iter 'end'" :=
+         (CFor init b update iter)
+            (in custom com at level 89,
+              init at level 99,
+              b at level 99,
+              update at level 99,
+              iter at level 99) : com_scope.
+
+(** For example, here is the factorial function again, written as a
+    formal Coq definition.  When this command terminates, the variable
+    [Y] will contain the factorial of the initial value of [X]. *)
+
+Definition fact_in_coq : com :=
+  <{ Z := X;
+     Y := 1;
+     while Z <> 0 do
+       Y := Y * Z;
+       Z := Z - 1
+     end }>.
+
+Print fact_in_coq.
+
+Definition imp_for_loop_notation_test : com :=
+  <{
+    X := 1;
+    while true do skip end;
+    for (W := 0;; W <= 9;; W := W + 1) do
+      X := 2 * X
+    end
+  }>
+.
+
+Definition imp_for_loop_notation_test_2 : com :=
+  <{
+    X := 1;
+    while true do skip end;
+    for (
+      for (W := 1;; true;; Z := Z + 1) do skip end;;
+      W <= 9;;
+      W := W + 1
+    ) do
+      X := 2 * X
+    end
+  }>
+.
+
+Check imp_for_loop_notation_test : com.
+Print imp_for_loop_notation_test.
+
+Definition plus2 : com :=
+  <{ X := X + 2 }>.
+
+Definition XtimesYinZ : com :=
+  <{ Z := X * Y }>.
+
+Definition subtract_slowly_body : com :=
+  <{ Z := Z - 1 ;
+     X := X - 1 }>.
+
+Definition subtract_slowly : com :=
+  <{ while X <> 0 do
+       subtract_slowly_body
+     end }>.
+
+Definition subtract_3_from_5_slowly : com :=
+  <{ X := 3 ;
+     Z := 5 ;
+     subtract_slowly }>.
+
+Definition loop : com :=
+  <{ while true do
+       skip
+     end }>.
+
+Fixpoint ceval_fun_no_while (st : state) (c : com) : state :=
+  match c with
+    | <{ skip }> =>
+        st
+    | <{ x := a }> =>
+        (x !-> (aeval st a) ; st)
+    | <{ c1 ; c2 }> =>
+        let st' := ceval_fun_no_while st c1 in
+        ceval_fun_no_while st' c2
+    | <{ if b then c1 else c2 end}> =>
+        if (beval st b)
+          then ceval_fun_no_while st c1
+          else ceval_fun_no_while st c2
+    | <{ while b do c end }> =>
+        st  (* bogus *)
+    | <{ for (init;; b;; update) do iter end }> =>
+        st  (* bogus *)
+  end.
+
+Reserved Notation
+         "st '=[' c ']=>' st'"
+         (at level 40, c custom com at level 99,
+          st constr, st' constr at next level).
+
+Inductive ceval : com -> state -> state -> Prop :=
+  | E_Skip : forall st,
+      st =[ skip ]=> st
+  | E_Asgn  : forall st a n x,
+      aeval st a = n ->
+      st =[ x := a ]=> (x !-> n ; st)
+  | E_Seq : forall c1 c2 st st' st'',
+      st  =[ c1 ]=> st'  ->
+      st' =[ c2 ]=> st'' ->
+      st  =[ c1 ; c2 ]=> st''
+  | E_IfTrue : forall st st' b c1 c2,
+      beval st b = true ->
+      st =[ c1 ]=> st' ->
+      st =[ if b then c1 else c2 end]=> st'
+  | E_IfFalse : forall st st' b c1 c2,
+      beval st b = false ->
+      st =[ c2 ]=> st' ->
+      st =[ if b then c1 else c2 end]=> st'
+  | E_WhileFalse : forall b st c,
+      beval st b = false ->
+      st =[ while b do c end ]=> st
+  | E_WhileTrue : forall st st' st'' b c,
+      beval st b = true ->
+      st  =[ c ]=> st' ->
+      st' =[ while b do c end ]=> st'' ->
+      st  =[ while b do c end ]=> st''
+  | E_For : forall st st' init b upd iter,
+      st =[ init; while b do iter; upd end ]=> st' ->
+      st =[ for (init;; b;; upd) do iter end ]=> st'
+
+  where "st =[ c ]=> st'" := (ceval c st st').
+
+Example ceval_example1:
+  empty_st =[
+     X := 2;
+     if (X <= 1)
+       then Y := 3
+       else Z := 4
+     end
+  ]=> (Z !-> 4 ; X !-> 2).
+Proof.
+  (* We must supply the intermediate state *)
+  apply E_Seq with (X !-> 2).
+  - (* assignment command *)
+    apply E_Asgn. reflexivity.
+  - (* if command *)
+    apply E_IfFalse.
+    reflexivity.
+    apply E_Asgn. reflexivity.
+Qed.
+
+Example ceval_for_loop_example_1:
+  empty_st =[
+    for (Z:= 1; X := 0;; X <= 1;; X := X + 1) do
+      Z := Z + 3
+    end
+  ]=> (
+    X !-> 2; Z !-> 7;
+    X !-> 1; Z !-> 4;
+    X !-> 0; Z !-> 1
+  ).
+Proof.
+  apply E_For
+    with (st' :=  X !-> 2; Z !-> 7; X !-> 1; Z !-> 4; X !-> 0; Z !-> 1).
+  - apply E_Seq with (st' := X !-> 0; Z !-> 1).
+    + apply E_Seq with (st' := Z !-> 1).
+      * apply E_Asgn. reflexivity.
+      * apply E_Asgn. reflexivity.
+    + apply E_WhileTrue with (st' := X !-> 1; Z !-> 4; X !-> 0; Z !-> 1).
+      * (* beval st b = true *)
+        reflexivity.
+      * apply E_Seq with (st' := Z !-> 4; X !-> 0; Z !-> 1).
+        -- apply E_Asgn. reflexivity.
+        -- apply E_Asgn. reflexivity.
+      * apply E_WhileTrue with
+          (st' := X !-> 2; Z !-> 7; X !-> 1; Z !-> 4; X !-> 0; Z !-> 1).
+        -- (* beval st b = true *)
+          reflexivity.
+        -- apply E_Seq
+            with (st' := Z !-> 7; X !-> 1; Z !-> 4; X !-> 0; Z !-> 1).
+          ++ apply E_Asgn. reflexivity.
+          ++ apply E_Asgn. reflexivity.
+        -- apply E_WhileFalse. reflexivity.
+Qed.
+
+Theorem ceval_deterministic: forall c st st1 st2,
+     st =[ c ]=> st1 ->
+     st =[ c ]=> st2 ->
+     st1 = st2.
+Proof.
+  intros c st st1 st2 E1 E2.
+  generalize dependent st2.
+  induction E1; intros st2 E2; inversion E2; subst.
+  - (* E_Skip *) reflexivity.
+  - (* E_Asgn *) reflexivity.
+  - (* E_Seq *)
+    rewrite (IHE1_1 st'0 H1) in *.
+    apply IHE1_2. assumption.
+  - (* E_IfTrue, b evaluates to true *)
+      apply IHE1. assumption.
+  - (* E_IfTrue,  b evaluates to false (contradiction) *)
+      rewrite H in H5. discriminate.
+  - (* E_IfFalse, b evaluates to true (contradiction) *)
+      rewrite H in H5. discriminate.
+  - (* E_IfFalse, b evaluates to false *)
+      apply IHE1. assumption.
+  - (* E_WhileFalse, b evaluates to false *)
+    reflexivity.
+  - (* E_WhileFalse, b evaluates to true (contradiction) *)
+    rewrite H in H2. discriminate.
+  - (* E_WhileTrue, b evaluates to false (contradiction) *)
+    rewrite H in H4. discriminate.
+  - (* E_WhileTrue, b evaluates to true *)
+    rewrite (IHE1_1 st'0 H3) in *.
+    apply IHE1_2. assumption.
+  - (* E_For *)
+    apply IHE1. apply H5.
+Qed.
+
+Theorem plus2_spec : forall st n st',
+  st X = n ->
+  st =[ plus2 ]=> st' ->
+  st' X = n + 2.
+Proof.
+  intros st n st' HX Heval.
+
+  (** Inverting [Heval] essentially forces Coq to expand one step of
+      the [ceval] computation -- in this case revealing that [st']
+      must be [st] extended with the new value of [X], since [plus2]
+      is an assignment. *)
+
+  inversion Heval. subst. clear Heval. simpl.
+  apply t_update_eq.  Qed.
+
+Theorem XtimesYinZ_spec : forall (st st' : state) (nx ny : nat),
+  st X = nx ->
+  st Y = ny ->
+  st =[ XtimesYinZ ]=> st' ->
+  st' Z = (st X) * (st Y).
+Proof.
+  intros st st' nx ny. intros HX HY Heval.
+  inversion Heval. subst. clear Heval.
+  simpl. apply t_update_eq.
+Qed.
+
+Theorem loop_never_stops : forall st st',
+  ~(st =[ loop ]=> st').
+Proof.
+  intros st st' contra. unfold loop in contra.
+  remember <{ while true do skip end }> as loopdef eqn:Heqloopdef.
+  induction contra; try discriminate; auto.
+  - inversion Heqloopdef; subst; clear Heqloopdef.
+    simpl in H. discriminate H.
+Qed.
+
+Fixpoint no_whiles (c : com) : bool :=
+  match c with
+  | <{ skip }> =>
+      true
+  | <{ _ := _ }> =>
+      true
+  | <{ c1 ; c2 }> =>
+      andb (no_whiles c1) (no_whiles c2)
+  | <{ if _ then ct else cf end }> =>
+      andb (no_whiles ct) (no_whiles cf)
+  | <{ while _ do _ end }>  =>
+      false
+  | <{ for (_;; _;; _) do _ end }> =>
+      false
+  end.
+Inductive no_whilesR: com -> Prop :=
+  | no_whilesR_skip : no_whilesR <{ skip }>
+  | no_whilesR_asgn (x : string) (a : aexp) : no_whilesR <{ x := a }>
+  | no_whilesR_seq (c1 c2 : com) (H_c1: no_whilesR c1) (H_c2: no_whilesR c2) :
+      no_whilesR <{ c1 ; c2 }>
+  | no_whilesR_if (b: bexp) (ct cf : com)
+    (H_ct: no_whilesR ct) (H_cf: no_whilesR cf) :
+      no_whilesR <{ if b then ct else cf end }>
+.
+
+Ltac bool_andb_hyp_left :=
+  match goal with
+    H: ?B && _ = true
+    |- ?B = true => destruct B; [ reflexivity | discriminate ]
+  end
+.
+
+Ltac bool_andb_hyp_right :=
+  match goal with
+    H: _ && ?B = true
+    |- ?B = true => destruct B; [
+      reflexivity
+      | rewrite -> andb_false_r in H; discriminate H
+    ]
+  end
+.
+
+Ltac apply_hyp_bool_andb :=
+  match goal with
+    | H: ?B && _ = true, 
+      H1: ?B = true -> ?P
+    |- ?P => apply H1; bool_andb_hyp_left
+
+    | H: _ && ?B = true,
+      H1: ?B = true -> ?P
+    |- ?P => apply H1; bool_andb_hyp_right
+  end
+.
+
+Theorem n_while_eqv_fixpoint_to_R:
+  forall c, no_whiles c = true -> no_whilesR c.
+Proof.
+  intros c H_no_whiles. 
+  induction c; simpl in H_no_whiles;
+  try constructor; try apply_hyp_bool_andb; try discriminate.
+Qed.
+
+Ltac bool_andb_goal :=
+  match goal with
+  | H_left: ?B_right = true,
+    H_right: ?B_left = true
+  |- ?B_right && ?B_left = true =>
+    rewrite -> H_left; rewrite -> H_right; reflexivity
+  end
+.
+
+Theorem n_while_eqv_R_to_fixpoint:
+  forall c, no_whilesR c -> no_whiles c = true.
+Proof.
+  intros c H_no_whilesR.
+  induction H_no_whilesR; simpl;
+  try bool_andb_goal; reflexivity.
+Qed.
+
+Theorem no_whiles_eqv:
+  forall c, no_whiles c = true <-> no_whilesR c.
+Proof.
+  split.
+  - apply n_while_eqv_fixpoint_to_R.
+  - apply n_while_eqv_R_to_fixpoint.
+Qed.
+
+Theorem no_whiles_terminating: forall (c : com) (st : state),
+  no_whilesR c -> st =[ c ]=> (ceval_fun_no_while st c).
+Proof.
+  intros c st H_c; generalize dependent st.
+  induction H_c; simpl; intros.
+  (*
+    Cannot trivially chain the 'constructor' tactic.
+    See the 'if' case for more details.
+  *)
+  - constructor.
+  - constructor. reflexivity.
+  - (* seq *)
+    apply E_Seq with (st' := (ceval_fun_no_while st c1));
+    auto.
+  - (* if *)
+    (*
+      Chaining the 'constructor' tactic after the induction discards the
+      important hypothesis regarding the value of (beval st b).
+      It also choses E_IfTrue regardless of the case.
+      So this one has to be handled manually.
+    *)
+    destruct (beval st b) as [|] eqn:E_beval_b.
+    + apply E_IfTrue; auto.
+    + apply E_IfFalse; auto.
+Qed.
+
+End ForLoopImp.
+
+Module ForLoopBreakImp.
+
+Inductive com : Type :=
+  | CSkip
+  | CBreak                        (* <--- NEW *)
+  | CAsgn (x : string) (a : aexp)
+  | CSeq (c1 c2 : com)
+  | CIf (b : bexp) (c1 c2 : com)
+  | CWhile (b : bexp) (c : com)
+  | CFor (c_init : com) (b : bexp) (c_update : com) (c_iter : com)
+.
+
+Notation "'break'" := CBreak (in custom com at level 0).
+Notation "'skip'"  :=
+         CSkip (in custom com at level 0) : com_scope.
+Notation "x := y"  :=
+         (CAsgn x y)
+            (in custom com at level 0, x constr at level 0,
+             y at level 85, no associativity) : com_scope.
+Notation "x ; y" :=
+         (CSeq x y)
+           (in custom com at level 90, right associativity) : com_scope.
+Notation "'if' x 'then' y 'else' z 'end'" :=
+         (CIf x y z)
+           (in custom com at level 89, x at level 99,
+            y at level 99, z at level 99) : com_scope.
+Notation "'while' x 'do' y 'end'" :=
+         (CWhile x y)
+            (in custom com at level 89, x at level 99, y at level 99) : com_scope.
+Notation "'for' '(' init ';;' b ';;' update ')' 'do' iter 'end'" :=
+         (CFor init b update iter)
+            (in custom com at level 89,
+              init at level 99,
+              b at level 99,
+              update at level 99,
+              iter at level 99) : com_scope.
+
+Inductive result : Type :=
+  | SContinue
+  | SBreak.
+
+Reserved Notation "st '=[' c ']=>' st' '/' s"
+     (at level 40, c custom com at level 99, st' constr at next level).
+
+Inductive ceval : com -> state -> result -> state -> Prop :=
+  | E_Skip : forall st,
+      st =[ CSkip ]=> st / SContinue
+  | E_Break : forall st,
+      st =[ CBreak ]=> st / SBreak
+  | E_Asgn  : forall st a n x,
+      aeval st a = n ->
+      st =[ x := a ]=> (x !-> n ; st) / SContinue
+  | E_Seq_Break : forall c1 c2 st st',
+      st  =[ c1 ]=> st' / SBreak ->
+      st  =[ c1 ; c2 ]=> st' / SBreak
+  | E_Seq_Continue : forall c1 c2 st st' s st'',
+      st  =[ c1 ]=> st' / SContinue  ->
+      st' =[ c2 ]=> st'' / s ->
+      st  =[ c1 ; c2 ]=> st'' / s
+  | E_IfTrue : forall st s st' b c1 c2,
+      beval st b = true ->
+      st =[ c1 ]=> st' / s ->
+      st =[ if b then c1 else c2 end]=> st' / s
+  | E_IfFalse : forall st s st' b c1 c2,
+      beval st b = false ->
+      st =[ c2 ]=> st' / s ->
+      st =[ if b then c1 else c2 end]=> st' / s
+  | E_WhileFalse : forall b st c,
+      beval st b = false ->
+      st =[ while b do c end ]=> st / SContinue
+  | E_WhileTrue_Continue : forall st s st' st'' b c,
+      beval st b = true ->
+      st  =[ c ]=> st' / SContinue ->
+      st' =[ while b do c end ]=> st'' / s ->
+      st  =[ while b do c end ]=> st'' / s
+  | E_WhileTrue_Break : forall st st' b c,
+      beval st b = true ->
+      st =[ c ]=> st' / SBreak ->
+      st =[ while b do c end ]=> st' / SContinue
+  | E_For : forall st s st' init b upd iter,
+      st =[ init; while b do iter; upd end ]=> st' / s ->
+      st =[ for (init;; b;; upd) do iter end ]=> st' / SContinue
+
+  where "st '=[' c ']=>' st' '/' s" := (ceval c st s st').
+
+Theorem break_ignore : forall c st st' s,
+     st =[ break; c ]=> st' / s ->
+     st = st'.
+Proof.
+  intros. inversion H; subst.
+  - inversion H5; subst. reflexivity.
+  - inversion H2.
+Qed.
+
+Theorem while_continue : forall b c st st' s,
+  st =[ while b do c end ]=> st' / s ->
+  s = SContinue.
+Proof.
+  intros. remember <{ while b do c end }> as c_while.
+  induction H; try reflexivity; try discriminate.
+  (* case: WhileTrue_Continue *)
+  inversion Heqc_while; subst.
+  clear Heqc_while H1 H0 H IHceval1 st'' st st'.
+  apply IHceval2. reflexivity.
+Qed.
+
+Theorem while_stops_on_break : forall b c st st',
+  beval st b = true ->
+  st =[ c ]=> st' / SBreak ->
+  st =[ while b do c end ]=> st' / SContinue.
+Proof.
+  intros b c st st'. intros H_b_eval H_c_eval_break.
+  inversion H_c_eval_break; subst;
+  apply E_WhileTrue_Break; assumption.
+Qed.
+
+Theorem seq_continue : forall c1 c2 st st' st'',
+  st =[ c1 ]=> st' / SContinue ->
+  st' =[ c2 ]=> st'' / SContinue ->
+  st =[ c1 ; c2 ]=> st'' / SContinue.
+Proof.
+  intros c1 c2 st st' st''. intros H_c1_eval H_c2_eval.
+  apply E_Seq_Continue with (st' := st'); assumption.
+Qed.
+
+Theorem seq_stops_on_break : forall c1 c2 st st',
+  st =[ c1 ]=> st' / SBreak ->
+  st =[ c1 ; c2 ]=> st' / SBreak.
+Proof.
+  intros c1 c2 st st'. intros H_c1_eval.
+  apply E_Seq_Break. exact H_c1_eval.
+Qed.
+
+Ltac rwd H1 H2 := rewrite H1 in H2; discriminate.
+
+Ltac find_rwd :=
+  match goal with
+    H1: ?E = true,
+    H2: ?E = false
+    |- _ => rwd H1 H2
+  end
+.
+
+Theorem while_break_true : forall b c st st',
+  st =[ while b do c end ]=> st' / SContinue ->
+  beval st' b = true ->
+  exists st'', st'' =[ c ]=> st' / SBreak.
+Proof.
+  intros b c st st'. intros H_while_eval H_b_eval_after.
+  remember <{ while b do c end }> as c_while.
+  induction H_while_eval; try discriminate;
+  try (
+    inversion Heqc_while; subst; rename H into H_b_eval_before;
+    clear Heqc_while
+  );
+  try find_rwd; auto.
+  - (* E_WhileTrue_Break *)
+    exists st. exact H_while_eval.
+Qed.
+
+Ltac rwd' H1 H2 := rewrite H1 in H2; discriminate.
+
+Ltac find_rwd' :=
+  match goal with
+    | H1: ?E = true,
+      H2: ?E = false
+      |- _ => rwd' H1 H2
+
+    | H1: ?E = SContinue,
+      H2: ?E = SBreak
+    |- _ => rwd' H1 H2
+  end
+.
+
+Ltac find_eqn_2params_and_eq :=
+  match goal with
+    H1: forall x1 x2, ?P x2 x1 -> ?L1 = ?R1 /\ ?L2 = ?R2,
+    H2: ?P ?X1 ?X2
+    |- _ =>
+      pose (H_and_eq := (H1 X2 X1 H2));
+      destruct H_and_eq as [H_eq1 H_eq2]
+      (*
+        For some reason subst works better.
+        Using this, some subgoals are left,
+        while using subst, every subgoal is solved.
+        I did not dig into that reason.
+      *)
+      (*;
+      rewrite -> ! H_eq1 in *; rewrite -> ! H_eq2 in *;
+      clear H_eq1 H_eq2
+      *)
+  end
+.
+
+Theorem ceval_deterministic: forall (c:com) st st1 st2 s1 s2,
+     st =[ c ]=> st1 / s1 ->
+     st =[ c ]=> st2 / s2 ->
+     st1 = st2 /\ s1 = s2.
+Proof.
+  intros c st st1 st2 s1 s2 E1 E2; generalize dependent s2;
+  generalize dependent st2.
+  induction E1; intros st2 s2 E2; inversion E2; subst;
+  (* See explaination above for why using subst *)
+  repeat (find_eqn_2params_and_eq; subst);
+  try discriminate; try find_rwd'; auto.
+Qed.
+
+End ForLoopBreakImp.
 
 (* 2022-01-06 10:25 *)
