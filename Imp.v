@@ -2522,8 +2522,8 @@ Proof.
           reflexivity.
         -- apply E_Seq
             with (st' := Z !-> 7; X !-> 1; Z !-> 4; X !-> 0; Z !-> 1).
-          ++ apply E_Asgn. reflexivity.
-          ++ apply E_Asgn. reflexivity.
+          ++ simpl. apply E_Asgn. reflexivity.
+          ++ simpl. apply E_Asgn. reflexivity.
         -- apply E_WhileFalse. reflexivity.
 Qed.
 
