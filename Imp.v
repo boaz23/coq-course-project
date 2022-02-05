@@ -1663,6 +1663,12 @@ Theorem loop_never_stops : forall st st',
 Proof.
   intros st st' contra. unfold loop in contra.
   remember <{ while true do skip end }> as loopdef eqn:Heqloopdef.
+
+  (** Proceed by induction on the assumed derivation showing that
+      [loopdef] terminates.  Most of the cases are immediately
+      contradictory and so can be solved in one step with
+      [discriminate]. *)
+
   induction contra; try discriminate; auto.
   - inversion Heqloopdef; subst; clear Heqloopdef.
     simpl in H. discriminate H.
@@ -2313,6 +2319,7 @@ End BreakImp.
     about making up a concrete Notation for [for] loops, but feel free
     to play with this too if you like.) *)
 
+(*
 Module ForLoopImp.
 
 Inductive com : Type :=
@@ -2920,5 +2927,6 @@ Proof.
 Qed.
 
 End ForLoopBreakImp.
+    [] *)
 
 (* 2022-01-06 10:25 *)
