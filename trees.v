@@ -66,6 +66,12 @@ Proof.
     reflexivity.
 Qed.
 
+(*
+  ****************************************
+  ********** true specification **********
+  ****************************************
+*)
+
 Definition injective {X Y : Type} (f : X -> Y) :=
   forall x y : X, f x = f y -> x = y.
 
@@ -96,6 +102,14 @@ Proof.
 Qed.
 *)
 
+
+(*
+  ****************************************
+  ********** false specification *********
+  ****************************************
+
+  The actual theorem is all the way down at the bottom.
+*)
 Definition R_reflexive {X : Type} (R : X -> X -> Prop) :=
   forall (x : X), R x x.
 Definition R_anti_symmetric {X : Type} (R : X -> X -> Prop) :=
