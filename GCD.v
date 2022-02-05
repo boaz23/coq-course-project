@@ -130,28 +130,6 @@ Proof.
   intros. subst. apply le_n.
 Qed.
 
-Theorem lt_succ_diag_r : forall (a : nat),
-  a < S a.
-Proof.
-  intros a.
-  unfold lt. apply le_n_S. apply le_n.
-Qed.
-
-Theorem le_eq_or_S_le : forall (a b : nat),
-  b <= a -> b = a \/ S b <= a.
-Proof.
-  intros a b H. le_inversion H H1 a' H_S.
-  - left. reflexivity.
-  - right. apply le_n_S. exact H.
-Qed.
-
-Theorem gt_ge_succ_r : forall (a b : nat),
-  a > b -> S b = a \/ a > S b.
-Proof.
-  unfold gt. unfold lt. intros a b H.
-  apply (le_eq_or_S_le a (S b)). exact H.
-Qed.
-
 (* sub_lt *)
 Theorem minus_lt : forall (a b : nat),
   b <= a -> 0 < b -> a - b < a.
@@ -213,94 +191,118 @@ Admitted.
 Definition noether_max_h P a b :=
   (forall a' b', max a' b' < max a b -> P a' b') -> P a b.
 
-Definition nat_order_prop (a b : nat) := a < b \/ a = b \/ a > b.
-
-Theorem nat_order_decideable : forall (a b : nat),
-  nat_order_prop a b.
+Theorem leb_S_n : forall (a b : nat),
+  (S a <=? S b) = true -> (a <=? b) = true.
 Proof.
-  intros a b; generalize dependent a; unfold nat_order_prop.
-  induction b; simpl; intros.
-  - destruct a; right; [left | right].
+  intros a b.
+  destruct b; simpl; intros; exact H.
+Qed.
+
+Theorem ltb_S_n : forall (a b : nat),
+  (S a <? S b) = true -> (a <? b) = true.
+Proof.
+  intros a b. unfold Nat.ltb.
+  apply (leb_S_n (S a) b).
+Qed.
+
+Theorem leb_S_n_false : forall (a b : nat),
+  (S a <=? S b) = false -> (a <=? b) = false.
+Proof.
+  intros a b H.
+  simpl in H. exact H.
+Qed.
+
+Theorem ltb_S_n_false : forall (a b : nat),
+  (S a <? S b) = false -> (a <? b) = false.
+Proof.
+  unfold Nat.ltb; intros a b H.
+  apply (leb_S_n_false (S a) b). exact H.
+Qed.
+
+Theorem nat_ltb_eqb_false_leb_false : forall (a b : nat),
+  (a <? b) = false -> (a =? b) = false -> (a <=? b) = false.
+Proof.
+  intros a b H_lt H_eq; generalize dependent a.
+  induction b; intros.
+  - destruct a.
+    + discriminate H_eq.
     + reflexivity.
-    + unfold gt. apply lt_0_n.
-  - destruct (IHb a); clear IHb; [| destruct H]; [left | left | right].
-    + apply lt_lt_succ_r. exact H.
-    + subst b. apply lt_succ_diag_r.
-    + apply gt_ge_succ_r in H as [H | H];
-      [left; symmetry | right]; exact H.
+  - destruct a.
+    + discriminate H_lt.
+    + simpl. apply IHb.
+      * apply ltb_S_n_false. exact H_lt.
+      * simpl in H_eq. exact H_eq.
 Qed.
 
-(*
-  Slightly different wording to allow destructing on the deciadablity of the
-  natural numbers.
-  This one is proved.
-  See below for the original.
-*)
-Lemma case_split_3way' (P : nat -> nat -> Prop) : forall a b,
-  (a < b -> P a b) -> (a = b -> P a b) -> (a > b -> P a b) -> P a b.
+Definition nat_order_bool_prop (a b : nat) :=
+  orb (a <? b) (orb (a =? b) (negb (a <=? b))) = true.
+
+Theorem nat_order_decidable_b : forall (a b : nat),
+  nat_order_bool_prop a b.
 Proof.
-  intros a b H_P_lt H_P_eq H_P_gt.
-  destruct (nat_order_decideable a b) as [H | [H | H]];
-  [apply H_P_lt | apply H_P_eq | apply H_P_gt]; exact H.
+  intros a b; unfold nat_order_bool_prop.
+  destruct (a <? b) eqn:E_lt; try reflexivity; simpl.
+  destruct (a =? b) eqn:E_eq; try reflexivity; simpl.
+  destruct (a <=? b) eqn: E_leb; try reflexivity; simpl.
+  pose (H_leb_false := (nat_ltb_eqb_false_leb_false a b E_lt E_eq)).
+  rewrite -> H_leb_false in E_leb.
+  discriminate E_leb.
 Qed.
 
-(*
-  See above for a refined proved version.
-  I had trouble splitting to cases on this one because it
-  maps to any Type rather than a Prop.
-  It gives the following error when attempting to ```destruct```
-  as in the above proof:
-  "Case analysis on sort Type is not allowed for inductive definition or.".
-  I don't know if you intended so or it is just a mistake.
-
-  The following is a directed acycling graph representation which
-  describes the transitive use of this lemma (case_split_3way) as it is
-  written (exactly) in the project specification.
-  On the left of an arrow is a theorem which is proved
-  and on the right of the arrow is a comma-seperated list of
-  the theorems which are used in order to prove it.
-
-  euclid_terminates -> find_euclid_n
-  find_euclid_n     -> find_euclid_n_gt, find_euclid_n_lt, case_split_3way
-  find_euclid_n_gt  -> find_euclid_n_lt
-  find_euclid_n_lt  -> lt_max_lt_S_r
-  lt_max_lt_S_r     -> max_lt_n
-  max_lt_n          -> max_either
-  max_either        -> case_split_3way
-
-  For example, to prove euclid_terminates, I used find_euclid_n
-  which itself uses case_split_3way transitively.
-
-  All of these are marked as Admitted at the end
-  and the rest are marked as Qed.
-  See the lemma above it for a refined proved version.
-*)
-
-Definition nat_order_bool_prop (a b : nat) := orb (a <? b) (orb (a =? b) (negb (a <=? b))) = true.
-
-Theorem hello : forall (a b : nat), nat_order_bool_prop a b.
+Theorem nat_ltb_lt : forall (a b : nat),
+  (a <? b) = true -> a < b.
 Proof.
-Admitted.
+  intros a b H; generalize dependent a.
+  induction b; simpl; intros.
+  - destruct a; discriminate H.
+  - destruct a.
+    + apply lt_0_n.
+    + apply lt_n_S. apply IHb. apply ltb_S_n. exact H.
+Qed.
 
-Theorem hello2 P : forall (a b : nat),
-  nat_order_bool_prop a b ->
-  (a < b -> P a b) -> (a = b -> P a b) -> (a > b -> P a b) -> P a b.
+Theorem nat_leb_le : forall (a b : nat),
+  (a =? b) = true -> a = b.
 Proof.
-  intros a b H_nat_order_b H_lt H_eq H_gt.
-  destruct (a <? b) eqn:H_order_b;
-  [| clear H_order_b; destruct (a =? b) eqn:H_order_b;
-  [| clear H_order_b; destruct (negb (a <=? b)) eqn:H_order_b]];
-  try discriminate; clear H_nat_order_b.
-  - give_up.
-  - give_up.
-  - give_up.
-Admitted.
+  intros a b H; generalize dependent b.
+  induction a; intros.
+  - destruct b.
+    + reflexivity.
+    + discriminate H.
+  - destruct b.
+    + discriminate H.
+    + f_equal. apply IHa. simpl in H. exact H.
+Qed.
+
+Theorem nat_gtb_gt : forall (a b : nat),
+  negb (a <=? b) = true -> a > b.
+Proof.
+  intros a b H. destruct (a <=? b) eqn:H_leb.
+  + discriminate H.
+  + clear H; rename H_leb into H. unfold gt. generalize dependent b.
+    induction a; intros.
+    - discriminate H.
+    - destruct b.
+      * apply lt_0_n.
+      * simpl in H. apply lt_n_S. apply IHa. exact H.
+Qed.
 
 Lemma case_split_3way P : forall a b,
   (a < b -> P a b) -> (a = b -> P a b) -> (a > b -> P a b) -> P a b.
 Proof.
-  intros. apply hello2; auto. apply hello.
-Admitted.
+  intros a b H_P_lt H_P_eq H_P_gt.
+  destruct (a <? b) eqn:H_ltb;
+  [| destruct (a =? b) eqn:H_eqb;
+  [| destruct (negb (a <=? b)) eqn:H_gtb]].
+  - apply H_P_lt. apply nat_ltb_lt. exact H_ltb.
+  - apply H_P_eq. apply nat_leb_le. exact H_eqb.
+  - apply H_P_gt. apply nat_gtb_gt. exact H_gtb.
+  - pose (H_nat_order_bool := (nat_order_decidable_b a b));
+    unfold nat_order_bool_prop in H_nat_order_bool.
+    rewrite -> H_ltb in H_nat_order_bool.
+    rewrite -> H_eqb in H_nat_order_bool.
+    rewrite -> H_gtb in H_nat_order_bool.
+    discriminate H_nat_order_bool.
+Qed.
 
 Definition euclid_terminates_prop_S (a b : nat) :=
   exists z, euclid (S a) (S b) z.
@@ -357,7 +359,7 @@ Proof.
   - apply max_le_r. apply lt_le_incl. exact H.
   - apply max_le_l. apply eq_le_incl. exact H.
   - apply max_le_l. apply lt_le_incl. exact H.
-Admitted.
+Qed.
 
 Theorem max_lt_n : forall (a b n : nat),
   a < n /\ b < n -> max a b < n.
@@ -365,7 +367,7 @@ Proof.
   intros a b n [H_a H_b].
   destruct (max_either a b) as [H_max | H_max];
   rewrite -> H_max; assumption.
-Admitted.
+Qed.
 
 Theorem lt_max_lt_S_r : forall (a b : nat),
   a < b -> max a (b - S a) < max a b.
@@ -374,7 +376,7 @@ Proof.
   rewrite -> (max_le_r a b).
   - apply max_lt_n. split; [| apply minus_lt_S]; exact H.
   - apply lt_le_incl. exact H.
-Admitted.
+Qed.
 
 Theorem nat_minus_1 : forall (b : nat),
   b > 0 -> S (b - 1) = b.
@@ -407,7 +409,7 @@ Proof.
   - exists x. apply step_b.
     + apply lt_n_S. exact H_order.
     + simpl. rewrite <- nat_S_of_minus_S; assumption.
-Admitted.
+Qed.
 
 Theorem find_euclid_n_eq : forall (a b : nat),
   a = b -> noether_max_h euclid_terminates_prop_S a b.
@@ -425,7 +427,7 @@ Proof.
   pose (H_z := find_euclid_n_lt b a).
   destruct H_z; auto. unfold euclid_terminates_prop_S.
   exists x. apply (euclid_symm_aux (S b) (S a) x). exact H.
-Admitted.
+Qed.
 
 Theorem find_euclid_n : forall (a b : nat),
   noether_max_h euclid_terminates_prop_S a b.
@@ -440,7 +442,7 @@ Proof.
     | apply find_euclid_n_eq
     | apply find_euclid_n_gt
   ]; auto.
-Admitted.
+Qed.
 
 Theorem euclid_terminates : forall a b,
   a > 0 -> b > 0 -> exists z, euclid a b z.
@@ -449,4 +451,4 @@ Proof.
   destruct a; [inversion H_a |]; destruct b; [inversion H_b |];
   clear H_a H_b; pose (P := euclid_terminates_prop_S).
   apply (noehter_max P). apply find_euclid_n.
-Admitted.
+Qed.
