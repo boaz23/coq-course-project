@@ -147,15 +147,16 @@ Proof.
   intros; unfold leaf. simpl. auto.
 Qed.
 
-(*
-Example search_tree_ex_1 : search_tree le (
+Definition search_tree_nat := search_tree le nat_le_partial_order.
+
+Example search_tree_ex_1 : search_tree_nat (
   node
     (node (node (leaf 2) 4 (leaf 5)) 4 (leaf 6))
     7
     (node empty 7 (leaf 10))
 ).
 Proof.
-  simpl. repeat split.
+  unfold leaf. repeat split.
   - apply le_S. apply le_S. apply le_n.
   - apply le_S. apply le_n.
   - apply le_n.
@@ -164,9 +165,6 @@ Proof.
   - apply le_S. apply le_S. apply le_S. apply le_n.
   - apply le_n.
 Qed.
-*)
-
-Definition search_tree_nat := search_tree le nat_le_partial_order.
 
 Definition search_tree_neg_1 := node (leaf 5) 8 (leaf 6).
 
